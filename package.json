@@ -1,0 +1,43 @@
+{
+  "name": "miuraswarm",
+  "version": "0.1.0",
+  "description": "Autonomous AI agent orchestrator — CLI-first, plugin-based, event-driven",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "miura": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint",
+    "start": "node dist/cli/index.js"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "orchestrator",
+    "multi-agent",
+    "cli",
+    "plugin",
+    "event-driven"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "oxlint": "^0.16.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "commander": "^14.0.3"
+  }
+}
