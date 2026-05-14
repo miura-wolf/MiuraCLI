@@ -6,6 +6,7 @@ import type {
   ModelRef,
   Plugin,
   PluginHostAPI,
+  ToolCall,
 } from '../../../core/types.js';
 
 const NIM_BASE_URL = 'https://integrate.api.nvidia.com/v1';
@@ -44,8 +45,22 @@ export class NvidiaNimAdapter implements LLMAdapter {
 
   async prompt(model: ModelRef, messages: LLMMessage[], options: LLMOptions): Promise<LLMResult> {
     const startTime = Date.now();
-
     const modelId = this.resolveModelId(model.model);
+
+    // Build body with optional tools support
+    const body: any = {
+      model: modelId,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      max_tokens: options.maxTokens ?? 4096,
+      temperature: options.temperature ?? 0.7,
+      stream: false,
+    };
+
+    // Add tools if provided (OpenAI-compatible format)
+    if (options.tools && options.tools.length > 0) {
+      body.tools = options.tools;
+      body.tool_choice = 'auto';
+    }
 
     const response = await fetch(`${NIM_BASE_URL}/chat/completions`, {
       method: 'POST',
@@ -53,13 +68,7 @@ export class NvidiaNimAdapter implements LLMAdapter {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        max_tokens: options.maxTokens ?? 4096,
-        temperature: options.temperature ?? 0.7,
-        stream: false,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -68,12 +77,40 @@ export class NvidiaNimAdapter implements LLMAdapter {
     }
 
     const data = await response.json() as {
-      choices: Array<{ message: { content: string } }>;
+      choices: Array<{
+        message: {
+          content: string | null;
+          tool_calls?: Array<{
+            id: string;
+            type: 'function';
+            function: {
+              name: string;
+              arguments: string;
+            };
+          }>;
+        };
+      }>;
       usage: { prompt_tokens: number; completion_tokens: number };
     };
 
-    const output = data.choices[0]?.message?.content ?? '';
+    const choice = data.choices[0];
+    const message = choice.message;
 
+    // Parse tool_calls if present (OpenAI-compatible format)
+    const toolCalls: ToolCall[] = [];
+    if (message.tool_calls) {
+      for (const tc of message.tool_calls) {
+        try {
+          const args = JSON.parse(tc.function.arguments);
+          toolCalls.push({ name: tc.function.name, arguments: args });
+        } catch {
+          // If arguments not JSON, wrap raw string as {_load: rawString}
+          toolCalls.push({ name: tc.function.name, arguments: { _raw: tc.function.arguments } });
+        }
+      }
+    }
+
+    const output = message.content ?? '';
     return {
       output,
       tokenUsage: {
@@ -82,11 +119,26 @@ export class NvidiaNimAdapter implements LLMAdapter {
       },
       model: model.model,
       durationMs: Date.now() - startTime,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     };
   }
 
   async *stream(model: ModelRef, messages: LLMMessage[], options: LLMOptions): AsyncGenerator<string> {
     const modelId = this.resolveModelId(model.model);
+
+    // Build body with optional tools support for streaming
+    const body: any = {
+      model: modelId,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      max_tokens: options.maxTokens ?? 4096,
+      temperature: options.temperature ?? 0.7,
+      stream: true,
+    };
+
+    if (options.tools && options.tools.length > 0) {
+      body.tools = options.tools;
+      body.tool_choice = 'auto';
+    }
 
     const response = await fetch(`${NIM_BASE_URL}/chat/completions`, {
       method: 'POST',
@@ -94,13 +146,7 @@ export class NvidiaNimAdapter implements LLMAdapter {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        max_tokens: options.maxTokens ?? 4096,
-        temperature: options.temperature ?? 0.7,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -116,7 +162,6 @@ export class NvidiaNimAdapter implements LLMAdapter {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() ?? '';
@@ -126,9 +171,7 @@ export class NvidiaNimAdapter implements LLMAdapter {
           const data = line.slice(6).trim();
           if (data === '[DONE]') return;
           try {
-            const parsed = JSON.parse(data) as {
-              choices: Array<{ delta: { content?: string } }>;
-            };
+            const parsed = JSON.parse(data) as { choices: Array<{ delta: { content?: string } }>; };
             const content = parsed.choices[0]?.delta?.content;
             if (content) yield content;
           } catch {

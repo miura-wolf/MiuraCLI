@@ -1,0 +1,19 @@
+{
+  "name": "miuraswarm-mcp",
+  "version": "0.1.0",
+  "description": "MiuraSwarm MCP Server for Pi integration",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

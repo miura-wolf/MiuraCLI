@@ -7,6 +7,7 @@ import type {
   IStateStore,
 } from './types.js';
 import { EventBus } from './event-bus.js';
+import { ToolRegistry } from './tool-registry.js';
 
 interface RegisteredPlugin {
   plugin: Plugin;
@@ -18,9 +19,11 @@ export class PluginHost implements PluginHostAPI {
   private plugins = new Map<string, RegisteredPlugin>();
   private eventBus: EventBus;
   private stateStore: IStateStore | null = null;
+  private toolRegistry: ToolRegistry;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
+    this.toolRegistry = new ToolRegistry();
   }
 
   setStateStore(store: IStateStore): void {
@@ -146,6 +149,10 @@ export class PluginHost implements PluginHostAPI {
       throw new Error('StateStore not configured. Call setStateStore() first.');
     }
     return this.stateStore;
+  }
+
+  getToolRegistry(): ToolRegistry {
+    return this.toolRegistry;
   }
 
   private validateManifest(manifest: PluginManifest): void {

@@ -1,19 +1,20 @@
+// Claude adapter — Anthropic Messages API with tool-calling
 import type {
   LLMAdapter,
   LLMMessage,
   LLMOptions,
   LLMResult,
   ModelRef,
-  Plugin,
   PluginHostAPI,
+  ToolCall,
 } from '../../../core/types.js';
-import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+
+const BASE_URL = 'https://api.anthropic.com/v1';
 
 export class ClaudeAdapter implements LLMAdapter {
   manifest = {
     id: 'adapter-claude',
-    name: 'Claude Code Adapter',
+    name: 'Claude Adapter',
     version: '0.1.0',
     type: 'adapter' as const,
     capabilities: ['code', 'plan', 'review', 'decision', 'context', 'tool_use', 'streaming', 'delegate', 'scout', 'research'],
@@ -21,21 +22,20 @@ export class ClaudeAdapter implements LLMAdapter {
   };
 
   private host: PluginHostAPI | null = null;
-  private processMap = new Map<string, { process: ReturnType<typeof spawn>; output: string; error: string }>();
+  private apiKey: string;
+
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
+  }
 
   async initialize(host: PluginHostAPI): Promise<void> {
     this.host = host;
+    if (!this.apiKey) throw new Error('ANTHROPIC_API_KEY not set');
   }
 
   async activate(): Promise<void> {}
   async deactivate(): Promise<void> {}
-  async unload(): Promise<void> {
-    // Kill all running processes
-    for (const [id, entry] of this.processMap) {
-      entry.process.kill();
-      this.processMap.delete(id);
-    }
-  }
+  async unload(): Promise<void> {}
 
   supports(model: ModelRef): boolean {
     return model.provider === 'claude';
@@ -43,130 +43,155 @@ export class ClaudeAdapter implements LLMAdapter {
 
   async prompt(model: ModelRef, messages: LLMMessage[], options: LLMOptions): Promise<LLMResult> {
     const startTime = Date.now();
+    const modelId = this.resolveModelId(model.model);
 
-    // Build the prompt from messages
+    // Separate system message
     const systemMsg = messages.find((m) => m.role === 'system');
     const userMessages = messages.filter((m) => m.role !== 'system');
 
-    const prompt = userMessages.map((m) => m.content).join('\n\n');
+    // Build request body
+    const body: any = {
+      model: modelId,
+      max_tokens: options.maxTokens ?? 4096,
+      messages: userMessages.map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      })),
+    };
 
-    // Build claude CLI arguments
-    const args: string[] = [
-      '--print',           // Non-interactive mode
-      '--model', this.resolveModelName(model.model),
-    ];
-
-    if (options.maxTokens) {
-      args.push('--max-tokens', String(options.maxTokens));
+    if (systemMsg) {
+      body.system = systemMsg.content;
     }
 
-    // Execute claude CLI
-    const output = await this.executeClaude(args, prompt, options);
+    // Add tools if provided (Anthropic format)
+    if (options.tools && options.tools.length > 0) {
+      body.tools = options.tools.map((tool: any) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.parameters,
+      }));
+    }
+
+    const res = await fetch(`${BASE_URL}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) throw new Error(`Claude error (${res.status}): ${await res.text()}`);
+
+    const data = await res.json() as {
+      content: Array<{
+        type: 'text' | 'tool_use';
+        text?: string;
+        name?: string;
+        input?: Record<string, unknown>;
+      }>;
+      usage: { input_tokens: number; output_tokens: number };
+    };
+
+    // Parse content blocks
+    const textParts: string[] = [];
+    const toolCalls: ToolCall[] = [];
+
+    for (const block of data.content) {
+      if (block.type === 'text' && block.text) {
+        textParts.push(block.text);
+      } else if (block.type === 'tool_use' && block.name) {
+        toolCalls.push({
+          name: block.name,
+          arguments: block.input || {},
+        });
+      }
+    }
 
     return {
-      output,
+      output: textParts.join(''),
       tokenUsage: {
-        prompt: this.estimateTokens(prompt),
-        completion: this.estimateTokens(output),
+        prompt: data.usage?.input_tokens ?? 0,
+        completion: data.usage?.output_tokens ?? 0,
       },
       model: model.model,
       durationMs: Date.now() - startTime,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     };
   }
 
   async *stream(model: ModelRef, messages: LLMMessage[], options: LLMOptions): AsyncGenerator<string> {
+    const modelId = this.resolveModelId(model.model);
+    const systemMsg = messages.find((m) => m.role === 'system');
     const userMessages = messages.filter((m) => m.role !== 'system');
-    const prompt = userMessages.map((m) => m.content).join('\n\n');
 
-    const args: string[] = [
-      '--print',
-      '--model', this.resolveModelName(model.model),
-      '--stream',          // Stream output
-    ];
+    const body: any = {
+      model: modelId,
+      max_tokens: options.maxTokens ?? 4096,
+      messages: userMessages.map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      })),
+      stream: true,
+    };
 
-    if (options.maxTokens) {
-      args.push('--max-tokens', String(options.maxTokens));
+    if (systemMsg) {
+      body.system = systemMsg.content;
     }
 
-    const processId = randomUUID();
-    const child = spawn('claude', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    const res = await fetch(`${BASE_URL}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
     });
 
-    this.processMap.set(processId, { process: child, output: '', error: '' });
+    if (!res.ok) throw new Error(`Claude error (${res.status})`);
 
-    // Write prompt to stdin
-    child.stdin.write(prompt);
-    child.stdin.end();
+    const reader = res.body?.getReader();
+    if (!reader) return;
 
-    // Yield chunks from stdout
+    const decoder = new TextDecoder();
     let buffer = '';
-    for await (const chunk of child.stdout) {
-      buffer += chunk.toString();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
       const lines = buffer.split('\n');
       buffer = lines.pop() ?? '';
+
       for (const line of lines) {
-        if (line.trim()) yield line;
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') return;
+
+        try {
+          const parsed = JSON.parse(data) as {
+            type: 'content_block_delta';
+            delta?: { text?: string };
+          };
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            yield parsed.delta.text;
+          }
+        } catch {
+          /* skip */
+        }
       }
     }
-
-    // Cleanup
-    this.processMap.delete(processId);
   }
 
-  private executeClaude(args: string[], prompt: string, _options: LLMOptions): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const processId = randomUUID();
-
-      const child = spawn('claude', args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-
-      let output = '';
-      let error = '';
-
-      child.stdout.on('data', (data: Buffer) => {
-        output += data.toString();
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        error += data.toString();
-      });
-
-      // Write prompt to stdin
-      child.stdin.write(prompt);
-      child.stdin.end();
-
-      this.processMap.set(processId, { process: child, output, error });
-
-      child.on('close', (code) => {
-        this.processMap.delete(processId);
-
-        if (code === 0) {
-          resolve(output.trim());
-        } else {
-          reject(new Error(`Claude CLI exited with code ${code}: ${error.trim()}`));
-        }
-      });
-
-      child.on('error', (err) => {
-        this.processMap.delete(processId);
-        reject(new Error(`Failed to spawn Claude CLI: ${err.message}`));
-      });
-    });
-  }
-
-  private resolveModelName(model: string): string {
+  private resolveModelId(model: string): string {
     const modelMap: Record<string, string> = {
-      'opus': 'claude-opus-4-20250514',
-      'sonnet': 'claude-sonnet-4-20250514',
-      'haiku': 'claude-haiku-3-5-20241022',
+      opus: 'claude-opus-4-20250514',
+      sonnet: 'claude-sonnet-4-20250514',
+      haiku: 'claude-haiku-3-5-20241022',
     };
     return modelMap[model] ?? model;
-  }
-
-  private estimateTokens(text: string): number {
-    // Rough estimation: ~4 chars per token for English
-    return Math.ceil(text.length / 4);
   }
 }

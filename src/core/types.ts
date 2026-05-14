@@ -1,12 +1,15 @@
 // MiuraSwarm Core Types
 // All shared interfaces, types, and contracts
 
+// Forward reference to ToolRegistry class (defined in tool-registry.ts)
+import type { ToolRegistry } from './tool-registry.js';
+
 // === Priority ===
 export type Priority = 'high' | 'medium' | 'low';
 
 // === Model References ===
 export interface ModelRef {
-  provider: 'claude' | 'nvidia-nim' | 'ollama' | 'openai';
+  provider: 'claude' | 'nvidia-nim' | 'ollama' | 'openai' | 'openrouter' | 'groq' | 'google' | 'cerebras' | 'zyphra' | 'cohere' | 'sambanova' | 'mistral';
   model: string;
   maxTokens?: number;
   supportsToolUse?: boolean;
@@ -62,6 +65,8 @@ export interface AgentResult {
   tokenUsage: { prompt: number; completion: number };
   model: ModelRef;
   artifacts?: Record<string, string>;
+  toolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
 }
 
 // === Pipeline ===
@@ -71,6 +76,11 @@ export interface StageConfig {
   timeoutMs?: number;
   skipWhen?: (ctx: PipelineContext) => boolean;
   maxRetries?: number;
+  /**
+   * Stages that can run in parallel with this one.
+   * When specified, these stages will execute concurrently using Promise.all.
+   */
+  parallelWith?: AgentRole[];
 }
 
 export interface PipelineDefinition {
@@ -180,7 +190,8 @@ export type PluginType =
   | 'memory'
   | 'integration'
   | 'knowledge'
-  | 'ui';
+  | 'ui'
+  | 'tool';
 
 export type PluginStatus =
   | 'loaded'
@@ -213,6 +224,8 @@ export interface PluginHostAPI {
   getPlugin(id: string): Plugin | undefined;
   query(capability: string): Plugin[];
   getStateStore(): IStateStore;
+  /** Returns the singleton ToolRegistry */
+  getToolRegistry(): ToolRegistry;
 }
 
 // === State Store Interface ===
@@ -262,7 +275,7 @@ export interface StoredEvent {
 
 // === LLM Adapter ===
 export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
 }
 
@@ -306,6 +319,18 @@ export interface LLMAdapter extends Plugin {
   supports(model: ModelRef): boolean;
 }
 
+export interface ToolResult {
+  name: string;
+  output: string;
+  error?: string;
+  durationMs: number;
+}
+
+export interface ToolHandler {
+  definition: ToolDefinition;
+  execute(args: Record<string, unknown>): Promise<ToolResult>;
+}
+
 // === Model Router Config ===
 export interface ModelRoutingConfig {
   defaults: Record<AgentRole, ModelRef>;
@@ -338,6 +363,7 @@ export interface EventMap {
   'agent.failed': { agentId: string; error: string };
   'agent.timeout': { agentId: string; timeoutMs: number };
   'agent.unhealthy': { agentId: string; lastHeartbeat: number };
+  'agent.toolCalled': { agentId: string; name: string; output: string; error?: string; durationMs: number };
   'pipeline.started': { pipelineId: string; stages: string[] };
   'pipeline.stage': {
     pipelineId: string;

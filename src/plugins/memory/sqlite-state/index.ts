@@ -234,6 +234,8 @@ export class SqliteStateStore extends StateStore {
   // === Private helpers ===
 
   private runMigrations(): void {
+    // Ensure schema_version table exists before querying it
+    this.db!.exec(`CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)`);
     const currentVersion = this.db!.prepare('SELECT version FROM schema_version').get() as { version: number } | undefined;
     const current = currentVersion?.version ?? 0;
 
