@@ -1,4 +1,4 @@
-import type { ToolCall, ToolResult, ModelRef, AgentResult } from './types.js';
+import type { ToolResult, ModelRef, AgentResult } from './types.js';
 
 /**
  * Takes a LLMResult and executes all tool calls it contains,

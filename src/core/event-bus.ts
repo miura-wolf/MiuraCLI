@@ -1,11 +1,4 @@
-import type { EventMap } from './types.js';
-
 type EventHandler<T> = T extends unknown ? (payload: T) => void : never;
-
-interface Subscription {
-  event: string;
-  handler: (...args: unknown[]) => void;
-}
 
 export class EventBus<T extends Record<string, unknown> = Record<string, unknown>> {
   private listeners = new Map<string, Set<(...args: unknown[]) => void>>();

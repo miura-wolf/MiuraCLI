@@ -13,19 +13,14 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ToolRegistry } from './core/tool-registry.js';
-import { executeToolCalls } from './core/tool-executor.js';
-import { Pipeline } from './core/pipeline.js';
-import { AgentBus } from './core/agent-bus.js';
 import { EventBus } from './core/event-bus.js';
-import { ModelRouter } from './core/model-router.js';
-import type { ModelRef, ToolCall, ToolResult, AgentResult, ModelRoutingConfig } from './core/types.js';
 
 describe('MiuraSwarm + Pi Real Integration', () => {
-  let eventBus: EventBus;
+  let _eventBus: EventBus;
   let toolRegistry: ToolRegistry;
 
   beforeEach(() => {
-    eventBus = new EventBus();
+    _eventBus = new EventBus();
     toolRegistry = new ToolRegistry();
   });
 
@@ -44,7 +39,7 @@ describe('MiuraSwarm + Pi Real Integration', () => {
           required: ['pattern'],
         },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         // Simular búsqueda de archivos - retornar todos los archivos relevantes
         return {
           name: 'glob',
@@ -64,7 +59,7 @@ describe('MiuraSwarm + Pi Real Integration', () => {
           required: ['file_path'],
         },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         return { name: 'read_file', output: 'export class Pipeline { ... }', durationMs: 10 };
       },
     });
@@ -82,7 +77,7 @@ describe('MiuraSwarm + Pi Real Integration', () => {
           required: ['pattern'],
         },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         return { name: 'grep', output: 'src/core/pipeline.ts:45: async run(options) {', durationMs: 30 };
       },
     });
@@ -128,9 +123,6 @@ describe('MiuraSwarm + Pi Real Integration', () => {
     });
 
     // Simular el ReAct loop
-    const modelRef: ModelRef = { provider: 'groq', model: 'llama-3.3-70b' };
-    const task = 'Find and fix the bug in pipeline.ts where parallel stages are not executing correctly';
-
     // Iteración 1: Explorar
     const exploreResult = await toolRegistry.execute([{ name: 'glob', arguments: { pattern: '**/pipeline.ts' } }]);
     expect(exploreResult[0].name).toBe('glob');

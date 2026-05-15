@@ -72,7 +72,7 @@ export interface EngramObservation {
  * For now, it uses the host's event bus to communicate.
  */
 class EngramMCPClient {
-  async search(query: string, project?: string): Promise<EngramObservation[]> {
+  async search(_query: string, _project?: string): Promise<EngramObservation[]> {
     // This is a stub — in production, this calls the Engram MCP server
     // via stdio/SSE transport. For now, return empty results.
     // The actual integration happens when MiuraSwarm is run as a
@@ -80,11 +80,11 @@ class EngramMCPClient {
     return [];
   }
 
-  async getById(id: number): Promise<EngramObservation | null> {
+  async getById(_id: number): Promise<EngramObservation | null> {
     return null;
   }
 
-  async context(project?: string, limit?: number): Promise<EngramObservation[]> {
+  async context(_project?: string, _limit?: number): Promise<EngramObservation[]> {
     return [];
   }
 }

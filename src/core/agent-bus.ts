@@ -3,8 +3,6 @@ import type {
   AgentResult,
   AgentRole,
   AgentSession,
-  AgentStatus,
-  ModelRef,
 } from './types.js';
 
 import { EventBus } from './event-bus.js';

@@ -59,6 +59,16 @@ miura init
 miura run "fix auth bug"
 ```
 
+## Runtime Configuration
+
+MiuraSwarm now supports portable runtime paths and security policies via env vars:
+
+- `MIURA_STATE_DB_PATH`: absolute/relative path for SQLite state db (default: `.miura/state.db`)
+- `API_KEYS_PATH`: env file for API key rotator (default: `.miura/api-keys.env`)
+- `MIURA_WEB_ALLOWLIST`: optional CSV allowlist for `web_fetch` domains (example: `docs.python.org,api.github.com`)
+
+If `MIURA_WEB_ALLOWLIST` is not set, `web_fetch` remains open to public hosts but still blocks local/private addresses.
+
 ## CLI Commands
 
 | Command | Description |
@@ -102,6 +112,14 @@ npx oxlint src/   # Lint (0 errors)
 - **Event-driven** — EventBus with wildcards + replay buffer
 - **Multi-model** — route each agent to the best model for the job
 - **Engram-safe** — READ-ONLY access to existing memory, never writes
+
+## Reliability and Observability
+
+- Structured JSON logs for agent/pipeline lifecycle
+- Pipeline checkpoints persisted to SQLite for interruption recovery
+- Resume API: `resumePipeline(pipelineId)`
+- Startup cleanup marks stale running pipelines as `interrupted`
+- Basic metrics tracked per pipeline: success/failure, latency, retries, escalations
 
 ## License
 

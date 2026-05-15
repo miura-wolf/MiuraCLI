@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ModelRouter, DEFAULT_ROUTING } from './model-router.js';
+import { ModelRouter } from './model-router.js';
 
 describe('ModelRouter', () => {
   it('resolves planner to deepseek-v4-flash', () => {

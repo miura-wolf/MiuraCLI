@@ -1,6 +1,8 @@
 import Database from 'better-sqlite3';
 import type {
+  AgentResult,
   AgentSession,
+  PipelineIterationRecord,
   PipelineProgress,
   StoredEvent,
   Task,
@@ -176,15 +178,19 @@ export class SqliteStateStore extends StateStore {
 
   async createPipelineProgress(progress: PipelineProgress): Promise<void> {
     this.db!.prepare(
-      `INSERT INTO pipeline_progress (id, task_id, stages, iteration, started_at, history)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO pipeline_progress (id, task_id, input, definition, stages, iteration, status, started_at, updated_at, history)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       progress.id,
       progress.taskId,
+      progress.input,
+      JSON.stringify(progress.definition),
       JSON.stringify(progress.stages),
       progress.iteration,
+      progress.status,
       progress.startedAt,
-      JSON.stringify(progress.history),
+      progress.updatedAt,
+      JSON.stringify(this.serializeHistory(progress.history)),
     );
   }
 
@@ -196,19 +202,50 @@ export class SqliteStateStore extends StateStore {
       sets.push('stages = ?');
       values.push(JSON.stringify(patch.stages));
     }
+    if (patch.input !== undefined) {
+      sets.push('input = ?');
+      values.push(patch.input);
+    }
+    if (patch.definition !== undefined) {
+      sets.push('definition = ?');
+      values.push(JSON.stringify(patch.definition));
+    }
     if (patch.iteration !== undefined) {
       sets.push('iteration = ?');
       values.push(patch.iteration);
     }
+    if (patch.status !== undefined) {
+      sets.push('status = ?');
+      values.push(patch.status);
+    }
+    if (patch.updatedAt !== undefined) {
+      sets.push('updated_at = ?');
+      values.push(patch.updatedAt);
+    }
     if (patch.history !== undefined) {
       sets.push('history = ?');
-      values.push(JSON.stringify(patch.history));
+      values.push(JSON.stringify(this.serializeHistory(patch.history)));
     }
 
     if (sets.length === 0) return;
 
     values.push(id);
     this.db!.prepare(`UPDATE pipeline_progress SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  async getPipelineProgress(id: string): Promise<PipelineProgress | null> {
+    const row = this.db!.prepare('SELECT * FROM pipeline_progress WHERE id = ?').get(id) as PipelineProgressRow | undefined;
+    return row ? this.rowToPipelineProgress(row) : null;
+  }
+
+  async listInterruptedPipelines(limit = 20): Promise<PipelineProgress[]> {
+    const rows = this.db!.prepare(
+      `SELECT * FROM pipeline_progress
+       WHERE status IN ('running', 'interrupted')
+       ORDER BY updated_at DESC
+       LIMIT ?`,
+    ).all(limit) as PipelineProgressRow[];
+    return rows.map((row) => this.rowToPipelineProgress(row));
   }
 
   // === Event Log ===
@@ -274,6 +311,47 @@ export class SqliteStateStore extends StateStore {
   private camelToSnake(str: string): string {
     return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }
+
+  private serializeHistory(history: PipelineIterationRecord[]): Array<{
+    iteration: number;
+    reviewerApproved: boolean;
+    stageResults: Array<[string, AgentResult]>;
+  }> {
+    return history.map((record) => ({
+      iteration: record.iteration,
+      reviewerApproved: record.reviewerApproved,
+      stageResults: Array.from(record.stageResults.entries()),
+    }));
+  }
+
+  private deserializeHistory(raw: string | null): PipelineIterationRecord[] {
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<{
+      iteration: number;
+      reviewerApproved: boolean;
+      stageResults: Array<[string, AgentResult]>;
+    }>;
+    return parsed.map((record) => ({
+      iteration: record.iteration,
+      reviewerApproved: record.reviewerApproved,
+      stageResults: new Map(record.stageResults),
+    }));
+  }
+
+  private rowToPipelineProgress(row: PipelineProgressRow): PipelineProgress {
+    return {
+      id: row.id,
+      taskId: row.task_id,
+      input: row.input ?? '',
+      definition: row.definition ? JSON.parse(row.definition) : { stages: [], maxIterations: 1 },
+      stages: row.stages ? JSON.parse(row.stages) : [],
+      iteration: row.iteration,
+      status: (row.status as PipelineProgress['status']) ?? 'running',
+      startedAt: row.started_at,
+      updatedAt: row.updated_at ?? row.started_at,
+      history: this.deserializeHistory(row.history),
+    };
+  }
 }
 
 // Row type interfaces
@@ -311,4 +389,17 @@ interface EventRow {
   type: string;
   payload: string;
   timestamp: number;
+}
+
+interface PipelineProgressRow {
+  id: string;
+  task_id: string;
+  input: string | null;
+  definition: string | null;
+  stages: string | null;
+  iteration: number;
+  status: string | null;
+  started_at: number;
+  updated_at: number | null;
+  history: string | null;
 }

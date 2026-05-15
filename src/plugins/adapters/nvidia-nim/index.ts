@@ -4,7 +4,6 @@ import type {
   LLMOptions,
   LLMResult,
   ModelRef,
-  Plugin,
   PluginHostAPI,
   ToolCall,
 } from '../../../core/types.js';

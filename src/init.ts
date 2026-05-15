@@ -6,11 +6,11 @@
 
 import { initializeGlobalRotator, getGlobalRotator } from './core/api-key-rotator.js';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { getRuntimeConfig } from './config.js';
 
 export function initializeMiuraSwarm(envFilePath?: string): void {
-  // Default path: D:/IA/API_KEYS_FREE_TIERS_IA.txt
-  const defaultPath = 'D:/IA/API_KEYS_FREE_TIERS_IA.txt';
+  const runtime = getRuntimeConfig();
+  const defaultPath = runtime.apiKeysPath;
   const pathToUse = envFilePath || process.env.API_KEYS_PATH || defaultPath;
 
   try {

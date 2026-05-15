@@ -1,4 +1,4 @@
-import type { MiuraConfig, PaceConfig, Priority, Task, TaskStatus } from './types.js';
+import type { PaceConfig, Priority, Task, TaskStatus, ModelRef } from './types.js';
 import { EventBus } from './event-bus.js';
 import { randomUUID } from 'node:crypto';
 import { createHash } from 'node:crypto';
@@ -197,5 +197,3 @@ export class TaskScheduler {
   }
 }
 
-// Avoid unused import warning — ModelRef is used in markCompleted
-type ModelRef = import('./types.js').ModelRef;

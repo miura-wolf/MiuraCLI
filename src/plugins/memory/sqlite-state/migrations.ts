@@ -70,4 +70,14 @@ export const migrations: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_event_timestamp ON event_log(timestamp)`,
     ],
   },
+  {
+    version: 2,
+    up: [
+      `ALTER TABLE pipeline_progress ADD COLUMN input TEXT DEFAULT ''`,
+      `ALTER TABLE pipeline_progress ADD COLUMN definition TEXT DEFAULT '{}'`,
+      `ALTER TABLE pipeline_progress ADD COLUMN status TEXT DEFAULT 'running'`,
+      `ALTER TABLE pipeline_progress ADD COLUMN updated_at INTEGER DEFAULT 0`,
+      `CREATE INDEX IF NOT EXISTS idx_pipeline_status ON pipeline_progress(status, updated_at)`,
+    ],
+  },
 ];

@@ -11,6 +11,8 @@ import { TaskScheduler, DEFAULT_PACE } from './core/task-scheduler.js';
 import { Pipeline } from './core/pipeline.js';
 import { ModelRouter, DEFAULT_ROUTING } from './core/model-router.js';
 import { StuckDetector } from './core/stuck-detector.js';
+import { StructuredLogger, MetricsCollector } from './core/observability.js';
+import { getRuntimeConfig } from './config.js';
 
 // Agent plugins
 import { PlannerAgent } from './plugins/agents/planner/index.js';
@@ -47,12 +49,12 @@ import type {
   AgentResult,
   LLMAdapter,
   LLMMessage,
-  LLMOptions,
   ModelRef,
   ModelRoutingConfig,
   PaceConfig,
   PipelineDefinition,
   PipelineResult,
+  PipelineMetrics,
   Plugin,
   PluginType,
   ToolCall,
@@ -80,6 +82,9 @@ export class MiuraSwarm {
   private taskScheduler: TaskScheduler;
   private modelRouter: ModelRouter;
   private stateStore: SqliteStateStore;
+  private logger: StructuredLogger;
+  private metrics: MetricsCollector;
+  private runtime = getRuntimeConfig();
   private initialized = false;
 
   private agentPlugins = new Map<AgentRole, Plugin & { getConfig(): AgentConfig; getSystemPrompt(): string }>();
@@ -90,14 +95,17 @@ export class MiuraSwarm {
     this.pluginHost = new PluginHost(this.eventBus);
     this.modelRouter = new ModelRouter(config.modelRouting);
     this.taskScheduler = new TaskScheduler(this.eventBus, { ...DEFAULT_PACE, ...config.pace });
-    this.stateStore = new SqliteStateStore(config.dbPath || '.miura/state.db');
+    this.stateStore = new SqliteStateStore(config.dbPath || this.runtime.stateDbPath);
     this.agentBus = new AgentBus(this.eventBus);
+    this.logger = new StructuredLogger();
+    this.metrics = new MetricsCollector();
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     await this.stateStore.initialize();
+    await this.recoverInterruptedPipelines();
     this.pluginHost.setStateStore(this.stateStore);
 
     // Register agent plugins
@@ -151,25 +159,28 @@ export class MiuraSwarm {
     await this.pluginHost.register(fileToolPlugin);
 
     this.eventBus.on('agent.spawned', (p: any) => {
+      this.logger.log({ timestamp: Date.now(), level: 'info', event: 'agent.spawned', metadata: p });
       this.stateStore.appendEvent({ id: 0, type: 'agent.spawned', payload: JSON.stringify(p), timestamp: Date.now() });
     });
     this.eventBus.on('agent.completed', (p: any) => {
+      this.logger.log({ timestamp: Date.now(), level: 'info', event: 'agent.completed', metadata: p });
       this.stateStore.appendEvent({ id: 0, type: 'agent.completed', payload: JSON.stringify(p), timestamp: Date.now() });
     });
     this.eventBus.on('agent.failed', (p: any) => {
+      this.logger.log({ timestamp: Date.now(), level: 'error', event: 'agent.failed', error: p?.error, metadata: p });
       this.stateStore.appendEvent({ id: 0, type: 'agent.failed', payload: JSON.stringify(p), timestamp: Date.now() });
     });
 
     this.initialized = true;
   }
 
-  async runAgent(role: AgentRole, input: string): Promise<AgentResult> {
+  async runAgent(role: AgentRole, input: string, forcedModel?: ModelRef): Promise<AgentResult> {
     this.ensureInitialized();
     const agentPlugin = this.agentPlugins.get(role);
     if (!agentPlugin) throw new Error(`No agent registered for role: ${role}`);
 
     const agentConfig = agentPlugin.getConfig();
-    const model = this.modelRouter.resolve(role);
+    const model = forcedModel ?? this.modelRouter.resolve(role);
     const registry = this.pluginHost.getToolRegistry();
 
     const result = await this.agentBus.spawn(role, agentConfig, async (cfg: AgentConfig, sessionId: string) => {
@@ -199,7 +210,7 @@ export class MiuraSwarm {
         }
 
         // Resolve model for this iteration (may change if escalation)
-        const currentModel = this.modelRouter.resolve(role);
+        const currentModel = forcedModel ?? this.modelRouter.resolve(role);
         const adapter = this.resolveAdapter(currentModel.provider);
 
         // Send messages + available tools
@@ -274,15 +285,81 @@ export class MiuraSwarm {
   }
 
   async runPipeline(input: string, definition: PipelineDefinition): Promise<PipelineResult> {
+    return this.runPipelineInternal(input, definition);
+  }
+
+  async resumePipeline(pipelineId: string): Promise<PipelineResult> {
+    this.ensureInitialized();
+    const progress = await this.stateStore.getPipelineProgress(pipelineId);
+    if (!progress) throw new Error(`Pipeline progress not found for ${pipelineId}`);
+    return this.runPipelineInternal(progress.input, progress.definition, progress);
+  }
+
+  async getLastPipelineMetrics(pipelineId: string): Promise<PipelineMetrics | null> {
+    return this.metrics.getMetric(pipelineId);
+  }
+
+  private async runPipelineInternal(
+    input: string,
+    definition: PipelineDefinition,
+    progress?: import('./core/types.js').PipelineProgress,
+  ): Promise<PipelineResult> {
     this.ensureInitialized();
     const pipeline = new Pipeline(this.eventBus);
-    return pipeline.run({
+    const pipelineId = progress?.id;
+    const start = Date.now();
+    const id = pipelineId ?? `pipeline-${Date.now()}`;
+    this.metrics.startPipeline(id);
+
+    const result = await pipeline.run({
       input,
       definition,
+      pipelineId,
+      resumeFrom: progress ? {
+        iteration: progress.iteration,
+        history: progress.history,
+        stages: progress.stages,
+      } : undefined,
+      onCheckpoint: async (checkpoint) => {
+        this.logger.log({
+          timestamp: Date.now(),
+          level: 'info',
+          event: 'pipeline.checkpoint',
+          pipelineId: checkpoint.pipelineId,
+          metadata: { iteration: checkpoint.iteration, status: checkpoint.status, stages: checkpoint.stages.length },
+        });
+        this.metrics.recordStage(checkpoint.pipelineId);
+        if (checkpoint.iteration > 1) this.metrics.recordRetry(checkpoint.pipelineId);
+        const existing = await this.stateStore.getPipelineProgress(checkpoint.pipelineId);
+        const base = {
+          id: checkpoint.pipelineId,
+          taskId: checkpoint.pipelineId,
+          input,
+          definition,
+          stages: checkpoint.stages,
+          iteration: checkpoint.iteration,
+          status: checkpoint.status,
+          startedAt: existing?.startedAt ?? Date.now(),
+          updatedAt: Date.now(),
+          history: checkpoint.history,
+        };
+        if (!existing) await this.stateStore.createPipelineProgress(base);
+        else await this.stateStore.updatePipelineProgress(checkpoint.pipelineId, base);
+      },
       agentBus: this.agentBus,
       modelRouter: this.modelRouter,
-      executeAgent: (role, model, agentInput) => this.runAgent(role, agentInput),
+      executeAgent: (role, model, agentInput) => this.runAgent(role, agentInput, model),
     });
+    const latencyMs = Date.now() - start;
+    const metric = this.metrics.finishPipeline(result.pipelineId, true, result.iterations, latencyMs);
+    this.logger.log({
+      timestamp: Date.now(),
+      level: 'info',
+      event: 'pipeline.completed',
+      pipelineId: result.pipelineId,
+      metadata: { latencyMs, iterations: result.iterations, metrics: metric },
+    });
+    return result;
   }
 
   getStatus(): MiuraSwarmStatus {
@@ -331,6 +408,22 @@ export class MiuraSwarm {
     }
 
     throw new Error(`No adapter for "${provider}". Available: ${Array.from(this.adapterMap.keys()).join(', ') || 'none'}`);
+  }
+
+  private async recoverInterruptedPipelines(): Promise<void> {
+    const interrupted = await this.stateStore.listInterruptedPipelines(100);
+    for (const pipeline of interrupted) {
+      await this.stateStore.updatePipelineProgress(pipeline.id, {
+        status: 'interrupted',
+        updatedAt: Date.now(),
+      });
+      this.logger.log({
+        timestamp: Date.now(),
+        level: 'warn',
+        event: 'pipeline.recovered_as_interrupted',
+        pipelineId: pipeline.id,
+      });
+    }
   }
 }
 

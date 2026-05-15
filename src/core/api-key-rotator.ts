@@ -122,7 +122,7 @@ export class ApiKeyRotator {
   /**
    * Report failure for a key
    */
-  reportFailure(key: string, statusCode?: number): void {
+  reportFailure(key: string, _statusCode?: number): void {
     const entry = this.findKey(key);
     if (entry) {
       entry.failures++;

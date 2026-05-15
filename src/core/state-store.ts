@@ -24,6 +24,8 @@ export abstract class StateStore implements IStateStore {
   // Pipeline progress
   abstract createPipelineProgress(progress: PipelineProgress): Promise<void>;
   abstract updatePipelineProgress(id: string, patch: Partial<PipelineProgress>): Promise<void>;
+  abstract getPipelineProgress(id: string): Promise<PipelineProgress | null>;
+  abstract listInterruptedPipelines(limit?: number): Promise<PipelineProgress[]>;
 
   // Event log
   abstract appendEvent(event: StoredEvent): Promise<void>;

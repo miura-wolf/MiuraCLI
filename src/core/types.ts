@@ -89,6 +89,8 @@ export interface PipelineDefinition {
   stuckDetection?: StuckDetectionConfig;
 }
 
+export type PipelineProgressStatus = 'running' | 'completed' | 'failed' | 'interrupted';
+
 export interface PipelineContext {
   input: string;
   stageResults: Map<string, AgentResult>;
@@ -116,6 +118,7 @@ export interface StageResult {
   role: AgentRole;
   status: 'completed' | 'skipped' | 'failed';
   result?: AgentResult;
+  error?: string;
   durationMs: number;
 }
 
@@ -242,6 +245,8 @@ export interface IStateStore {
   updateAgentSession(id: string, patch: Partial<AgentSession>): Promise<void>;
   createPipelineProgress(progress: PipelineProgress): Promise<void>;
   updatePipelineProgress(id: string, patch: Partial<PipelineProgress>): Promise<void>;
+  getPipelineProgress(id: string): Promise<PipelineProgress | null>;
+  listInterruptedPipelines(limit?: number): Promise<PipelineProgress[]>;
   appendEvent(event: StoredEvent): Promise<void>;
   getEvents(since: number, limit?: number): Promise<StoredEvent[]>;
 }
@@ -260,10 +265,24 @@ export interface AgentSession {
 export interface PipelineProgress {
   id: string;
   taskId: string;
+  input: string;
+  definition: PipelineDefinition;
   stages: StageResult[];
   iteration: number;
+  status: PipelineProgressStatus;
   startedAt: number;
+  updatedAt: number;
   history: PipelineIterationRecord[];
+}
+
+export interface PipelineMetrics {
+  pipelineId: string;
+  success: boolean;
+  iterations: number;
+  stageCount: number;
+  retries: number;
+  escalations: number;
+  latencyMs: number;
 }
 
 export interface StoredEvent {

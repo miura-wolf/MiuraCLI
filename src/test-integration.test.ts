@@ -21,7 +21,7 @@ import { AgentBus } from './core/agent-bus.js';
 import { EventBus } from './core/event-bus.js';
 import { ModelRouter } from './core/model-router.js';
 import { ToolRegistry } from './core/tool-registry.js';
-import type { AgentRole, ModelRef, StageConfig, AgentResult, ModelRoutingConfig } from './core/types.js';
+import type { AgentRole, ModelRef, StageConfig, ModelRoutingConfig } from './core/types.js';
 
 describe('MiuraSwarm Integration - Complex Refactor Task', () => {
   let eventBus: EventBus;
@@ -68,7 +68,7 @@ describe('MiuraSwarm Integration - Complex Refactor Task', () => {
         description: 'Read file contents',
         parameters: { type: 'object', properties: { file_path: { type: 'string' } } },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         return { name: 'read_file', output: 'export function legacy() { return "old"; }', durationMs: 10 };
       },
     });
@@ -80,7 +80,7 @@ describe('MiuraSwarm Integration - Complex Refactor Task', () => {
         description: 'Write file contents',
         parameters: { type: 'object', properties: { file_path: { type: 'string' }, content: { type: 'string' } } },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         return { name: 'write_file', output: '✅ Wrote 45 bytes', durationMs: 15 };
       },
     });
@@ -92,7 +92,7 @@ describe('MiuraSwarm Integration - Complex Refactor Task', () => {
         description: 'Execute shell command',
         parameters: { type: 'object', properties: { command: { type: 'string' } } },
       },
-      async execute(args: Record<string, unknown>) {
+      async execute(_args: Record<string, unknown>) {
         return { name: 'run_shell_command', output: '✓ 33 tests passed', durationMs: 500 };
       },
     });
@@ -122,7 +122,7 @@ describe('MiuraSwarm Integration - Complex Refactor Task', () => {
       },
       agentBus,
       modelRouter,
-      executeAgent: async (role: AgentRole, model: ModelRef, input: string) => {
+      executeAgent: async (role: AgentRole, model: ModelRef, _input: string) => {
         stageCount++;
         const output = role === 'reviewer' ? 'APPROVED ✅' : `${role} completed`;
         return {

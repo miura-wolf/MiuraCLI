@@ -22,8 +22,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ListPromptsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 // =============================================================================

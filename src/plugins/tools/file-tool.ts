@@ -1,25 +1,62 @@
 import type { Plugin, PluginHostAPI } from '../../core/types.js';
-import { ToolDefinition, ToolHandler, ToolResult } from '../../core/types.js';
+import { ToolHandler, ToolResult } from '../../core/types.js';
 import { promises as fs } from 'fs';
-import { join, isAbsolute, resolve } from 'path';
+import { isAbsolute, resolve } from 'path';
 import { spawn as spawnChild } from 'child_process';
+import { isIP } from 'node:net';
+import { getRuntimeConfig, isCommandAllowed } from '../../config.js';
 
 // Safety: restrict to current working directory and below
 function safeJoin(base: string, target: string): string {
   if (isAbsolute(target)) {
     throw new Error('Absolute paths not allowed');
   }
-  const full = resolve(base, target);
-  if (!full.startsWith(base)) {
+  const baseResolved = resolve(base);
+  const full = resolve(baseResolved, target);
+  const basePrefix = baseResolved.endsWith('\\') || baseResolved.endsWith('/')
+    ? baseResolved
+    : `${baseResolved}\\`;
+  if (full !== baseResolved && !full.startsWith(basePrefix)) {
     throw new Error('Path traversal not allowed');
   }
   return full;
 }
 
-// Allowlisted commands for shell executions
-const ALLOWED_COMMANDS = new Set([
-  'ls', 'cat', 'echo', 'pwd', 'find', 'git', 'npm', 'npx', 'pip', 'python', 'node', 'tsc', 'vitest',
-]);
+const runtimeConfig = getRuntimeConfig();
+
+function isBlockedHost(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  if (!host) return true;
+  if (host === 'localhost') return true;
+  if (host.endsWith('.local')) return true;
+  if (host === '0.0.0.0' || host === '::' || host === '::1') return true;
+
+  const ipVersion = isIP(host);
+  if (ipVersion === 4) {
+    const parts = host.split('.').map(Number);
+    if (parts[0] === 10) return true;
+    if (parts[0] === 127) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    return false;
+  }
+
+  if (ipVersion === 6) {
+    if (host.startsWith('fc') || host.startsWith('fd')) return true;
+    if (host.startsWith('fe80:')) return true;
+    return false;
+  }
+
+  return false;
+}
+
+function isAllowedWebHost(hostname: string): boolean {
+  const allowlist = runtimeConfig.webFetchAllowlist;
+  if (allowlist.length === 0) return true;
+  const host = hostname.toLowerCase();
+  return allowlist.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
 
 /** read_file tool */
 export const readFileTool: ToolHandler = {
@@ -116,7 +153,7 @@ export const globTool: ToolHandler = {
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     const { pattern, path = '.' } = args as { pattern: string; path?: string };
     const cwd = process.cwd();
-    const absPath = safeJoin(cwd, path);
+    safeJoin(cwd, path);
     // Use native fs.glob if available (Node 20+), otherwise fallback
     const files = await (fs as any).glob?.(`${pattern}`) ?? [];
     return { name: 'glob', output: files.join('\n'), durationMs: 0 };
@@ -140,11 +177,11 @@ export const shellTool: ToolHandler = {
   },
   async execute(args: Record<string, unknown>): Promise<ToolResult> {
     const { command, args: cmdArgs = [] } = args as { command: string; args?: string[] };
-    
-    if (!ALLOWED_COMMANDS.has(command)) {
+
+    if (!isCommandAllowed(runtimeConfig.commandPolicy, command, Array.isArray(cmdArgs) ? cmdArgs : [])) {
       return { 
         name: 'run_shell_command', 
-        output: `❌ Command not allowed: ${command}`, 
+        output: `❌ Command not allowed by policy: ${command} ${(cmdArgs ?? []).join(' ')}`.trim(),
         error: 'not allowed', 
         durationMs: 0 
       };
@@ -195,6 +232,17 @@ export const webFetchTool: ToolHandler = {
       body?: string; 
       headers?: Record<string, string> 
     };
+
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Only http/https URLs are allowed');
+    }
+    if (isBlockedHost(parsed.hostname)) {
+      throw new Error('Blocked host for security reasons');
+    }
+    if (!isAllowedWebHost(parsed.hostname)) {
+      throw new Error(`Host not allowed by MIURA_WEB_ALLOWLIST: ${parsed.hostname}`);
+    }
     
     const response = await fetch(url, {
       method,

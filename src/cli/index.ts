@@ -31,7 +31,7 @@ program
   .command('init')
   .description('Initialize MiuraSwarm in the current project')
   .option('-f, --force', 'Overwrite existing configuration')
-  .action(async (opts) => {
+  .action(async (_opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     console.log('MiuraSwarm initialized.');
@@ -68,7 +68,7 @@ program
   .command('plan <task>')
   .description('Create an implementation plan without executing')
   .option('-m, --model <model>', 'Override default model')
-  .action(async (task, opts) => {
+  .action(async (task, _opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const result = await miura.runAgent('planner', task);
@@ -80,7 +80,7 @@ program
 program
   .command('research <topic>')
   .description('Research a topic using web search and documentation')
-  .action(async (topic, opts) => {
+  .action(async (topic, _opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const result = await miura.runAgent('researcher', topic);
@@ -93,7 +93,7 @@ program
   .command('scout [path]')
   .description('Quick reconnaissance of a codebase or directory')
   .option('-d, --depth <n>', 'Directory scan depth', '3')
-  .action(async (path, opts) => {
+  .action(async (path, _opts) => {
     const target = path || process.cwd();
     const miura = new MiuraSwarm();
     await miura.initialize();
@@ -106,7 +106,7 @@ program
 program
   .command('review <diff>')
   .description('Review a diff or code change')
-  .action(async (diff, opts) => {
+  .action(async (diff, _opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const result = await miura.runAgent('reviewer', `Review this diff:\n\n${diff}`);
@@ -137,7 +137,7 @@ program
   .command('agent <role> <task>')
   .description('Run a single agent with a specific role')
   .option('-m, --model <model>', 'Override default model for this role')
-  .action(async (role, task, opts) => {
+  .action(async (role, task, _opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const result = await miura.runAgent(role as any, task);
@@ -149,7 +149,7 @@ program
 program
   .command('oracle <question>')
   .description('Ask the Oracle for a decision on a tradeoff or approach')
-  .action(async (question, opts) => {
+  .action(async (question, _opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const result = await miura.runAgent('oracle', question);
@@ -161,7 +161,7 @@ program
 program
   .command('status')
   .description('Show current MiuraSwarm status — agents, tasks, plugins')
-  .action(async (opts) => {
+  .action(async (_opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
     const status = miura.getStatus();

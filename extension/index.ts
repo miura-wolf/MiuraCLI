@@ -97,7 +97,7 @@ async function discoverOllamaModels(baseUrl: string): Promise<typeof OLLAMA_MODE
 
 async function runMiuraPipeline(
   task: string,
-  options: { maxIterations?: number; agent?: AgentRole } = {}
+  _options: { maxIterations?: number; agent?: AgentRole } = {}
 ): Promise<PipelineResult> {
   // This is a simplified pipeline runner
   // In full implementation, this would spawn agents via the adapters
@@ -180,7 +180,7 @@ export default async function (pi: ExtensionAPI) {
       task: Type.String({ description: "The task description for the pipeline" }),
       maxIterations: Type.Optional(Type.Number({ description: "Max iterations (default: 3)" })),
     }),
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute(toolCallId, params, signal, onUpdate, _ctx) {
       const { task, maxIterations = 3 } = params;
 
       onUpdate?.({ content: [{ type: "text", text: `Starting MiuraSwarm pipeline...` }] });
@@ -265,7 +265,7 @@ export default async function (pi: ExtensionAPI) {
       topic: Type.String({ description: "Topic to research" }),
       depth: Type.Optional(Type.String({ description: "Depth: 'quick', 'standard', 'deep'" })),
     }),
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute(toolCallId, params, signal, onUpdate, _ctx) {
       const { topic, depth = "standard" } = params;
 
       onUpdate?.({ content: [{ type: "text", text: `Researching: ${topic}...` }] });

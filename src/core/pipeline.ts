@@ -8,6 +8,7 @@ import type {
   StageConfig,
   StageResult,
   StuckSignal,
+  PipelineProgressStatus,
 } from './types.js';
 
 import { EventBus } from './event-bus.js';
@@ -21,6 +22,19 @@ export interface PipelineRunOptions {
   definition: PipelineDefinition;
   agentBus: AgentBus;
   modelRouter: ModelRouter;
+  pipelineId?: string;
+  resumeFrom?: {
+    iteration: number;
+    history: PipelineIterationRecord[];
+    stages: StageResult[];
+  };
+  onCheckpoint?: (checkpoint: {
+    pipelineId: string;
+    iteration: number;
+    stages: StageResult[];
+    history: PipelineIterationRecord[];
+    status: PipelineProgressStatus;
+  }) => Promise<void> | void;
   executeAgent: (role: AgentRole, model: import('./types.js').ModelRef, input: string) => Promise<AgentResult>;
 }
 
@@ -32,17 +46,17 @@ export class Pipeline {
   }
 
   async run(options: PipelineRunOptions): Promise<PipelineResult> {
-    const pipelineId = randomUUID();
+    const pipelineId = options.pipelineId ?? randomUUID();
     const startTime = Date.now();
     const stuckDetector = new StuckDetector(options.definition.stuckDetection);
     const context: PipelineContext = {
       input: options.input,
       stageResults: new Map(),
-      iteration: 0,
-      history: [],
+      iteration: options.resumeFrom?.iteration ?? 0,
+      history: options.resumeFrom?.history ? [...options.resumeFrom.history] : [],
     };
 
-    const allStageResults: StageResult[] = [];
+    const allStageResults: StageResult[] = options.resumeFrom?.stages ? [...options.resumeFrom.stages] : [];
     const stuckEvents: StuckSignal[] = [];
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
@@ -147,9 +161,24 @@ export class Pipeline {
         }
 
         if (stuckSignal.suggestion === 'REFRAME_TASK' || stuckSignal.suggestion === 'CHANGE_APPROACH') {
+          await options.onCheckpoint?.({
+            pipelineId,
+            iteration: context.iteration,
+            stages: allStageResults,
+            history: context.history,
+            status: 'interrupted',
+          });
           break;
         }
       }
+
+      await options.onCheckpoint?.({
+        pipelineId,
+        iteration: context.iteration,
+        stages: allStageResults,
+        history: context.history,
+        status: 'running',
+      });
     }
 
     // Check max iterations
@@ -168,6 +197,13 @@ export class Pipeline {
     };
 
     this.eventBus.emit('pipeline.completed', { pipelineId, result });
+    await options.onCheckpoint?.({
+      pipelineId,
+      iteration: context.iteration,
+      stages: allStageResults,
+      history: context.history,
+      status: approved ? 'completed' : 'failed',
+    });
     return result;
   }
 
@@ -206,9 +242,7 @@ export class Pipeline {
     options: PipelineRunOptions,
     pipelineId: string,
   ): Promise<StageResult[]> {
-    const results: StageResult[] = [];
-
-    const promises = parallelStages.map(async ({ index, stage }) => {
+    const promises = parallelStages.map(async ({ stage }) => {
       const stageStart = Date.now();
       
       this.eventBus.emit('pipeline.stage', {
@@ -253,6 +287,7 @@ export class Pipeline {
         return {
           role: stage.role,
           status: 'failed' as const,
+          error: errorMsg,
           durationMs: Date.now() - stageStart,
         };
       }
@@ -319,6 +354,7 @@ export class Pipeline {
       allStageResults.push({
         role: stageConfig.role,
         status: 'failed',
+        error: errorMsg,
         durationMs: Date.now() - stageStart,
       });
 
