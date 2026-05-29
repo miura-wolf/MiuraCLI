@@ -191,10 +191,10 @@ export class GoogleAIAdapter implements LLMAdapter {
 
   private toGeminiContents(messages: LLMMessage[]): Array<{ role: string; parts: Array<{ text: string }> }> {
     return messages
-      .filter((m) => m.role !== 'system')
+      .filter((m) => m.role !== 'system' && m.content != null)
       .map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
+        parts: [{ text: m.content! }],
       }));
   }
 

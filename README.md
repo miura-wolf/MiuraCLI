@@ -78,14 +78,17 @@ MiuraSwarm
 git clone https://github.com/miura-wolf/MiuraCLI.git
 cd MiuraCLI
 bun install
-bun run build        # Compile to dist/miura (.exe on Windows)
+bun run build        # Compile to dist/miura.exe (standalone binary)
 ```
 
 ### Running
 
 ```bash
-# Interactive REPL
-./dist/miura
+# Run the standalone binary (compiled with Bun)
+./dist/miura.exe
+
+# Or run directly with Bun (development)
+bun start
 
 # Or use the MCP server (for integration with other agents)
 cd mcp && npm install && npm run build && node dist/server.js

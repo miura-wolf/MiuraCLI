@@ -8,13 +8,14 @@
     "miura": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && bun build src/cli/index.ts --compile --outfile dist/miura.exe",
+    "postinstall": "bun install --no-dev",
     "dev": "tsc --watch",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "oxlint",
-    "start": "node dist/cli/index.js",
-    "start:bun": "bun run src/cli/index.ts",
+    "start": "bun run src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
     "compile": "bun build src/cli/index.ts --compile --outfile dist/miura.exe",
     "clean": "rm -rf dist/"
   },
