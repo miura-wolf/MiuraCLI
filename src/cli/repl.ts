@@ -332,13 +332,16 @@ function stripAnsi(text: string): string {
   return text.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
-// === CLI Entry Point ===
-main(process.argv.slice(2)).catch(err => {
-  if (err?.message !== 'exit') {
-    console.error(C.red, err, C.reset);
-    process.exit(1);
-  }
-});
+// === CLI Entry Point (only runs when repl.ts is executed directly) ===
+const isMainModule = process.argv[1]?.endsWith('repl.ts') || process.argv[1]?.endsWith('repl.js');
+if (isMainModule) {
+  main(process.argv.slice(2)).catch(err => {
+    if (err?.message !== 'exit') {
+      console.error(C.red, err, C.reset);
+      process.exit(1);
+    }
+  });
+}
 
 async function main(argv: string[]): Promise<void> {
   let resumeSessionId: string | undefined;
