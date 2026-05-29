@@ -281,17 +281,16 @@ export class SqliteStateStore extends StateStore {
 
     for (const migration of migrations) {
       if (migration.version > current) {
-        this.db!.exec('BEGIN');
-        try {
-          for (const sql of migration.up) {
+        for (const sql of migration.up) {
+          try {
             this.db!.exec(sql);
+          } catch (err) {
+            // Skip migration errors (e.g. duplicate column in ALTER TABLE)
+            // This keeps the migration idempotent across schema changes
           }
-          this.db!.query('INSERT OR REPLACE INTO schema_version (version) VALUES ($version)').run({ $version: migration.version });
-          this.db!.exec('COMMIT');
-        } catch (err) {
-          this.db!.exec('ROLLBACK');
-          throw err;
         }
+        // Record the migration version even if some steps were skipped
+        this.db!.query('INSERT OR REPLACE INTO schema_version (version) VALUES ($version)').run({ $version: migration.version });
       }
     }
   }

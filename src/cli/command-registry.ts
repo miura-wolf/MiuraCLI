@@ -533,6 +533,23 @@ export class CommandRegistry {
       },
     });
 
+    // ─── /help ────────────────────────────────────────────────────────────────
+    this.register({
+      name: 'help',
+      aliases: ['?', 'h'],
+      description: 'Show list of available commands',
+      usage: '',
+      handler: async () => {
+        const lines = ['## Available Commands\n'];
+        for (const cmd of this.commands.values()) {
+          const aliases = cmd.aliases?.length ? ` (${cmd.aliases.join(', ')})` : '';
+          lines.push(`  **/${cmd.name}**${aliases} — ${cmd.description}`);
+        }
+        lines.push('', 'For detailed help, see: docs/MIURA-CLI-REFERENCE.md');
+        return { output: lines.join('\n'), type: 'info' };
+      },
+    });
+
     // ─── /exit ───────────────────────────────────────────────────────────────
     this.register({
       name: 'exit',

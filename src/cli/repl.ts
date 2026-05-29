@@ -7,12 +7,17 @@
  */
 
 import { loadEnv } from '../env.js';
+import { mkdirSync } from 'fs';
+import { resolve } from 'path';
 import { MiuraSwarm } from '../index.js';
 import { CommandRegistry } from './command-registry.js';
 import type { CommandResult } from './command-registry.js';
 import { SessionManager } from './session-manager.js';
 
 loadEnv();
+
+// Ensure .miura directory exists for state DB
+try { mkdirSync(resolve('.miura'), { recursive: true }); } catch {}
 
 // ANSI color codes
 const C = {

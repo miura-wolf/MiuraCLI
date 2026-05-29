@@ -127,8 +127,15 @@ describe('CommandRegistry', () => {
   });
 
   describe('/help', () => {
-    it('returns null for /help (falls through to free text)', () => {
-      expect(registry.match('/help')).toBeNull();
+    it('returns help command for /help', () => {
+      const result = registry.match('/help');
+      expect(result).not.toBeNull();
+      expect(result!.cmd.name).toBe('help');
+    });
+
+    it('matches help aliases', () => {
+      expect(registry.match('/?')).not.toBeNull();
+      expect(registry.match('/h')).not.toBeNull();
     });
   });
 

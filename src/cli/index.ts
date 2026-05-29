@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
- * MiuraSwarm CLI — Autonomous AI Agent Orchestrator
+ * MiuraCLI — Autonomous AI Agent Orchestrator
  *
  * CLI-first, plugin-based, event-driven.
- * Usage: miura <command> [options]
+ * Usage: miura <command> [options] | miura (no args starts REPL)
  */
 
 import { loadEnv } from '../env.js';
 import { Command } from 'commander';
 import { MiuraSwarm } from '../index.js';
 import { getConfigValue, setConfigValue, loadConfigFile } from '../config.js';
+import { runRepl } from './repl.js';
 
 loadEnv();
 
@@ -20,7 +21,7 @@ const program = new Command();
 
 program
   .name('miura')
-  .description('MiuraSwarm — Autonomous AI agent orchestrator')
+  .description('MiuraCLI — Autonomous AI agent orchestrator')
   .version(version);
 
 // === init ===
@@ -209,4 +210,9 @@ program
     }
   });
 
-program.parse();
+// If no command was provided, launch the interactive REPL instead of showing help
+if (!process.argv.slice(2).length) {
+  runRepl().catch(console.error);
+} else {
+  program.parse();
+}
