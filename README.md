@@ -75,8 +75,8 @@ MiuraSwarm
 ### Installation
 
 ```bash
-git clone https://github.com/miura-wolf/miuraswarm.git
-cd miuraswarm
+git clone https://github.com/miura-wolf/MiuraCLI.git
+cd MiuraCLI
 bun install
 bun run build        # Compile to dist/miura (.exe on Windows)
 ```
