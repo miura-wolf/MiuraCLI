@@ -1,11 +1,15 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const ORACLE_CONFIG: AgentConfig = {
   id: 'agent-oracle',
   role: 'oracle' as AgentRole,
   specialty: 'Decision engine for complex tradeoffs. Analyzes options, predicts outcomes, recommends paths with confidence scores.',
-  defaultModel: { provider: 'claude', model: 'opus', maxTokens: 16_384, supportsToolUse: true, supportsStreaming: true },
-  fallbackModels: [{ provider: 'nvidia-nim', model: 'kimi-k2.5' }],
+  defaultModel: { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-pro', maxTokens: 16_384 },
+  fallbackModels: [
+    { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
+    { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
+  ],
   maxTokens: 16_384,
   timeoutMs: 90_000,
   capabilities: ['decision'] as AgentCapability[],

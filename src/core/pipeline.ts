@@ -74,62 +74,48 @@ export class Pipeline {
       let workerTurns = 0;
       let reviewerTurns = 0;
 
-      // Process stages with parallel execution support
-      for (let i = 0; i < options.definition.stages.length; i++) {
-        const stageConfig = options.definition.stages[i];
+      // DAG Execution Logic
+      let pendingStages = [...options.definition.stages];
+      const completedInIteration = new Set<AgentRole>();
 
-        // Check if this stage was already executed as part of a parallel group
-        if (stageConfig.parallelWith) {
-          // Check if this stage is the leader of a parallel group
-          const parallelGroup = this.buildParallelGroup(i, options.definition.stages);
-          
-          if (parallelGroup.leader === i) {
-            // Execute parallel group
-            const parallelResults = await this.executeParallelGroup(
-              parallelGroup.stages,
-              context,
-              options,
-              pipelineId,
-            );
-            
-            // Add all results to allStageResults
-            for (const result of parallelResults) {
-              if (result.role === 'worker' || result.role === 'planner') {
-                workerTurns++;
-              }
-              if (result.role === 'reviewer') {
-                reviewerTurns++;
-                approved = this.parseApproval(result.result?.output || '');
-                finalOutput = result.result?.output || finalOutput;
-              }
-              // Update finalOutput with the last stage output
-              if (result.result?.output) {
-                finalOutput = result.result.output;
-              }
-              allStageResults.push(result);
-              totalPromptTokens += result.result?.tokenUsage.prompt || 0;
-              totalCompletionTokens += result.result?.tokenUsage.completion || 0;
-            }
-          }
-          // Skip if this stage is part of a group already processed
-          const leaderIndex = parallelGroup.leader;
-          if (leaderIndex !== i && parallelGroup.stages.some(s => s.index === i)) {
-            continue;
-          }
-        } else {
-          // Sequential execution (original behavior)
-          await this.executeStage(stageConfig, context, options, allStageResults, pipelineId);
-          
-          if (stageConfig.role === 'worker' || stageConfig.role === 'planner') {
+      while (pendingStages.length > 0) {
+        // Find all stages that have their dependencies met
+        const executable = pendingStages.filter(stage => 
+          !stage.dependsOn || stage.dependsOn.every(dep => completedInIteration.has(dep))
+        );
+
+        if (executable.length === 0) {
+          throw new Error(`Circular dependency detected in pipeline stages. Pending: ${pendingStages.map(s => s.role).join(', ')}`);
+        }
+
+        // Execute available stages in parallel
+        const results = await Promise.all(executable.map(async (stage) => {
+          const result = await this.executeStage(stage, context, options, pipelineId);
+          return result;
+        }));
+
+        for (const result of results) {
+          completedInIteration.add(result.role);
+          allStageResults.push(result);
+
+          if (result.role === 'worker' || result.role === 'planner') {
             workerTurns++;
           }
-          if (stageConfig.role === 'reviewer') {
+          if (result.role === 'reviewer') {
             reviewerTurns++;
-            const lastOutput = allStageResults[allStageResults.length - 1]?.result?.output || '';
-            approved = this.parseApproval(lastOutput);
-            finalOutput = lastOutput;
+            approved = this.parseApproval(result.result?.output || '');
+            finalOutput = result.result?.output || finalOutput;
           }
+          if (result.result?.output) {
+            finalOutput = result.result.output;
+          }
+          totalPromptTokens += result.result?.tokenUsage.prompt || 0;
+          totalCompletionTokens += result.result?.tokenUsage.completion || 0;
         }
+
+        // Remove executed stages from pending list
+        const executableRoles = executable.map(s => s.role);
+        pendingStages = pendingStages.filter(s => !executableRoles.includes(s.role));
       }
 
       // Record iteration for stuck detection
@@ -208,115 +194,22 @@ export class Pipeline {
   }
 
   /**
-   * Build a parallel group starting from the given index
-   */
-  private buildParallelGroup(startIndex: number, stages: StageConfig[]): { leader: number; stages: Array<{ index: number; stage: StageConfig }> } {
-    const leader = startIndex;
-    const group: Array<{ index: number; stage: StageConfig }> = [];
-    const leaderStage = stages[startIndex];
-    
-    if (!leaderStage.parallelWith) {
-      return { leader, stages: [{ index: leader, stage: leaderStage }] };
-    }
-
-    // Add leader
-    group.push({ index: leader, stage: leaderStage });
-
-    // Add parallel stages
-    for (const role of leaderStage.parallelWith) {
-      const parallelIndex = stages.findIndex(s => s.role === role);
-      if (parallelIndex !== -1 && parallelIndex > startIndex) {
-        group.push({ index: parallelIndex, stage: stages[parallelIndex] });
-      }
-    }
-
-    return { leader, stages: group };
-  }
-
-  /**
-   * Execute a group of stages in parallel
-   */
-  private async executeParallelGroup(
-    parallelStages: Array<{ index: number; stage: StageConfig }>,
-    context: PipelineContext,
-    options: PipelineRunOptions,
-    pipelineId: string,
-  ): Promise<StageResult[]> {
-    const promises = parallelStages.map(async ({ stage }) => {
-      const stageStart = Date.now();
-      
-      this.eventBus.emit('pipeline.stage', {
-        pipelineId,
-        stage: stage.role,
-        status: 'running',
-      });
-
-      try {
-        const model = stage.model ?? options.modelRouter.resolve(stage.role);
-        const result = await options.executeAgent(
-          stage.role,
-          model,
-          this.buildPrompt(stage, context),
-        );
-
-        context.stageResults.set(stage.role, result);
-
-        this.eventBus.emit('pipeline.stage', {
-          pipelineId,
-          stage: stage.role,
-          status: 'done',
-        });
-
-        return {
-          role: stage.role,
-          status: 'completed' as const,
-          result,
-          durationMs: Date.now() - stageStart,
-        };
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        
-        this.eventBus.emit('pipeline.stage', {
-          pipelineId,
-          stage: stage.role,
-          status: 'failed',
-        });
-
-        options.modelRouter.reportFailure(stage.role, stage.model ?? options.modelRouter.resolve(stage.role));
-
-        return {
-          role: stage.role,
-          status: 'failed' as const,
-          error: errorMsg,
-          durationMs: Date.now() - stageStart,
-        };
-      }
-    });
-
-    const parallelResults = await Promise.all(promises);
-    return parallelResults;
-  }
-
-  /**
-   * Execute a single stage (sequential execution)
+   * Execute a single stage
    */
   private async executeStage(
     stageConfig: StageConfig,
     context: PipelineContext,
     options: PipelineRunOptions,
-    allStageResults: StageResult[],
     pipelineId: string,
-  ): Promise<void> {
+  ): Promise<StageResult> {
     // Check skip predicate
     if (stageConfig.skipWhen?.(context)) {
-      const stageResult: StageResult = {
+      this.eventBus.emit('pipeline.stage', { pipelineId, stage: stageConfig.role, status: 'skipped' });
+      return {
         role: stageConfig.role,
         status: 'skipped',
         durationMs: 0,
       };
-      allStageResults.push(stageResult);
-      this.eventBus.emit('pipeline.stage', { pipelineId, stage: stageConfig.role, status: 'skipped' });
-      return;
     }
 
     const model = stageConfig.model ?? options.modelRouter.resolve(stageConfig.role);
@@ -337,28 +230,45 @@ export class Pipeline {
 
       context.stageResults.set(stageConfig.role, result);
 
-      allStageResults.push({
-        role: stageConfig.role,
-        status: 'completed',
-        result,
-        durationMs: Date.now() - stageStart,
-      });
-
       this.eventBus.emit('pipeline.stage', {
         pipelineId,
         stage: stageConfig.role,
         status: 'done',
       });
+
+      return {
+        role: stageConfig.role,
+        status: 'completed',
+        result,
+        durationMs: Date.now() - stageStart,
+      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      allStageResults.push({
+
+      this.eventBus.emit('pipeline.stage', {
+        pipelineId,
+        stage: stageConfig.role,
+        status: 'failed',
+      });
+
+      options.modelRouter.reportFailure(stageConfig.role, model);
+
+      // Record failure in context so downstream stages can see it
+      context.stageResults.set(stageConfig.role, {
+        agentId: `failed-${stageConfig.role}`,
+        output: errorMsg,
+        exitCode: 1,
+        durationMs: Date.now() - stageStart,
+        tokenUsage: { prompt: 0, completion: 0 },
+        model: stageConfig.role === 'worker' ? model : options.modelRouter.resolve(stageConfig.role),
+      } as AgentResult);
+
+      return {
         role: stageConfig.role,
         status: 'failed',
         error: errorMsg,
         durationMs: Date.now() - stageStart,
-      });
-
-      options.modelRouter.reportFailure(stageConfig.role, model);
+      };
     }
   }
 
@@ -383,6 +293,9 @@ export class Pipeline {
 
   private parseApproval(reviewerOutput: string): boolean {
     const lower = reviewerOutput.toLowerCase();
-    return lower.includes('approved') || lower.includes('approved ✅') || lower.includes('lgtm');
+    // Match "approved" or "lgtm" but NOT "not approved", "unapproved", "never approved", etc.
+    const approvedPattern = /(?<!\b(?:not|un|never|no|dis))\bapproved\b/;
+    const lgtmPattern = /\blgtm\b/;
+    return approvedPattern.test(lower) || lgtmPattern.test(lower);
   }
 }

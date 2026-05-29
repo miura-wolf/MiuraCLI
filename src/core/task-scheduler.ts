@@ -1,4 +1,4 @@
-import type { PaceConfig, Priority, Task, TaskStatus, ModelRef } from './types.js';
+import type { PaceConfig, Priority, Task, TaskStatus, ModelRef, AgentRole, PipelineDefinition } from './types.js';
 import { EventBus } from './event-bus.js';
 import { randomUUID } from 'node:crypto';
 import { createHash } from 'node:crypto';
@@ -31,8 +31,13 @@ export class TaskScheduler {
   createTask(
     input: string,
     type: Task['type'],
-    priority: Priority = 'medium',
+    options: {
+      priority?: Priority;
+      role?: AgentRole;
+      pipelineDefinition?: PipelineDefinition;
+    } = {},
   ): Task {
+    const { priority = 'medium', role, pipelineDefinition } = options;
     const inputHash = this.hashInput(type, input);
 
     // Deduplication
@@ -42,6 +47,8 @@ export class TaskScheduler {
     const task: ScheduledTask = {
       id: randomUUID(),
       type,
+      role,
+      pipelineDefinition,
       input,
       priority,
       status: 'created',
@@ -196,4 +203,3 @@ export class TaskScheduler {
     return createHash('sha256').update(`${type}:${input}`).digest('hex').slice(0, 16);
   }
 }
-

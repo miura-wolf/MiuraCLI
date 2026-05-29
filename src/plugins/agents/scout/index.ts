@@ -1,11 +1,15 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const SCOUT_CONFIG: AgentConfig = {
   id: 'agent-scout',
   role: 'scout' as AgentRole,
   specialty: 'Quick reconnaissance of unknown codebases. Produces compressed summaries of structure, patterns, and health.',
-  defaultModel: { provider: 'claude', model: 'haiku', maxTokens: 8_192, supportsStreaming: true },
-  fallbackModels: [{ provider: 'nvidia-nim', model: 'gemma-4-31b-it' }],
+  defaultModel: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 8_192 },
+  fallbackModels: [
+    { provider: 'groq', model: 'qwen/qwen3-32b' },
+    { provider: 'cerebras', model: 'llama3.1-8b' },
+  ],
   maxTokens: 8_192,
   timeoutMs: 30_000,
   capabilities: ['scout'] as AgentCapability[],

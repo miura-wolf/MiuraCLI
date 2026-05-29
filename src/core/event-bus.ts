@@ -46,8 +46,8 @@ export class EventBus<T extends Record<string, unknown> = Record<string, unknown
       for (const handler of directListeners) {
         try {
           handler(payload);
-        } catch {
-          // Error isolation — swallow listener errors
+        } catch (error) {
+          console.error(`[EventBus] Listener error for "${event}":`, error);
         }
       }
     }
@@ -61,8 +61,8 @@ export class EventBus<T extends Record<string, unknown> = Record<string, unknown
         for (const handler of wildcardListeners) {
           try {
             handler(payload);
-          } catch {
-            // Error isolation
+          } catch (error) {
+            console.error(`[EventBus] Wildcard listener error for "${event}" (pattern "${wildcard}"):`, error);
           }
         }
       }

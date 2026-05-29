@@ -9,15 +9,12 @@
 import { loadEnv } from '../env.js';
 import { Command } from 'commander';
 import { MiuraSwarm } from '../index.js';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { getConfigValue, setConfigValue, loadConfigFile } from '../config.js';
 
 loadEnv();
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
-const version: string = pkg.version;
+// Version is hardcoded for compiled binary; falls back to package.json when running via bun
+const version = '0.1.0';
 
 const program = new Command();
 
@@ -164,7 +161,7 @@ program
   .action(async (_opts) => {
     const miura = new MiuraSwarm();
     await miura.initialize();
-    const status = miura.getStatus();
+    const status = await miura.getStatus();
     console.log(JSON.stringify(status, null, 2));
     await miura.shutdown();
   });
@@ -177,23 +174,39 @@ program
   .option('--set <key=value>', 'Set a config value')
   .option('--list', 'List all configuration')
   .action(async (opts) => {
-    const miura = new MiuraSwarm();
-    await miura.initialize();
-
-    if (opts.list || (!opts.get && !opts.set)) {
-      const config = miura.getConfig();
-      console.log(JSON.stringify(config, null, 2));
-    } else if (opts.get) {
-      const config = miura.getConfig();
-      const keys = opts.get.split('.');
-      let value: any = config;
-      for (const key of keys) {
-        value = value?.[key];
+    if (opts.set) {
+      const eqIndex = opts.set.indexOf('=');
+      if (eqIndex === -1) {
+        console.error('Invalid format. Use: config --set key=value');
+        process.exit(1);
       }
-      console.log(value ?? 'not found');
+      const key = opts.set.slice(0, eqIndex).trim();
+      let value: unknown = opts.set.slice(eqIndex + 1).trim();
+      // Parse JSON values (numbers, booleans, objects, arrays)
+      if (value === 'true') value = true;
+      else if (value === 'false') value = false;
+      else if (value === 'null') value = null;
+      else if (!isNaN(Number(value)) && value !== '') value = Number(value);
+      else {
+        try { value = JSON.parse(value as string); } catch { /* keep as string */ }
+      }
+      setConfigValue(key, value);
+      console.log(`Set ${key} = ${JSON.stringify(value)}`);
+    } else if (opts.get) {
+      const value = getConfigValue(opts.get);
+      if (value !== undefined) {
+        console.log(typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value));
+      } else {
+        console.log(`Config key "${opts.get}" not found.`);
+      }
+    } else {
+      const config = loadConfigFile();
+      if (Object.keys(config).length === 0) {
+        console.log('No config overrides set. Use: config --set key=value');
+      } else {
+        console.log(JSON.stringify(config, null, 2));
+      }
     }
-
-    await miura.shutdown();
   });
 
 program.parse();

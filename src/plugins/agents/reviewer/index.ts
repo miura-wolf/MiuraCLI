@@ -1,11 +1,15 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const REVIEWER_CONFIG: AgentConfig = {
   id: 'agent-reviewer',
   role: 'reviewer' as AgentRole,
   specialty: 'Code review and quality control. Reviews diffs, validates plans, checks project health.',
-  defaultModel: { provider: 'claude', model: 'opus', maxTokens: 16_384, supportsToolUse: true, supportsStreaming: true },
-  fallbackModels: [{ provider: 'nvidia-nim', model: 'kimi-k2.5' }],
+  defaultModel: { provider: 'nvidia-nim', model: 'z-ai/glm-5.1', maxTokens: 16_384 },
+  fallbackModels: [
+    { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash' },
+    { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
+  ],
   maxTokens: 16_384,
   timeoutMs: 60_000,
   capabilities: ['review'] as AgentCapability[],

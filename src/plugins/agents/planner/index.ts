@@ -1,11 +1,15 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const PLANNER_CONFIG: AgentConfig = {
   id: 'agent-planner',
   role: 'planner' as AgentRole,
   specialty: 'Creates detailed implementation plans before writing code. Breaks down tasks into actionable steps with clear dependencies.',
-  defaultModel: { provider: 'claude', model: 'opus', maxTokens: 32_768, supportsToolUse: true, supportsStreaming: true },
-  fallbackModels: [{ provider: 'nvidia-nim', model: 'kimi-k2.5' }],
+  defaultModel: { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash', maxTokens: 32_768 },
+  fallbackModels: [
+    { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
+    { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
+  ],
   maxTokens: 32_768,
   timeoutMs: 120_000,
   capabilities: ['plan', 'code', 'decision'] as AgentCapability[],

@@ -182,7 +182,7 @@ describe('MiuraSwarm Integration - Complex Refactor Task', () => {
     ];
 
     let callCount = 0;
-    await expect(() =>
+    await expect(
       agentBus.spawnBatch(
         configs,
         async (config, sessionId) => {

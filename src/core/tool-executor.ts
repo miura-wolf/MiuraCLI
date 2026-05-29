@@ -1,12 +1,13 @@
 import type { ToolResult, ModelRef, AgentResult } from './types.js';
+import type { ToolRegistry } from './tool-registry.js';
 
 /**
  * Takes a LLMResult and executes all tool calls it contains,
  * then returns a fresh AgentResult that includes the raw tool output.
  */
 export async function executeToolCalls(
-  llmResult: AgentResult, // actually is LLMResult in real use but shares tokenUsage, model, etc.
-  registry: any, // ToolRegistry (avoid circular import)
+  llmResult: AgentResult,
+  registry: ToolRegistry,
   agentId: string,
   model: ModelRef
 ): Promise<AgentResult> {

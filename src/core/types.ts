@@ -9,7 +9,7 @@ export type Priority = 'high' | 'medium' | 'low';
 
 // === Model References ===
 export interface ModelRef {
-  provider: 'claude' | 'nvidia-nim' | 'ollama' | 'openai' | 'openrouter' | 'groq' | 'google' | 'cerebras' | 'zyphra' | 'cohere' | 'sambanova' | 'mistral';
+  provider: 'claude' | 'nvidia-nim' | 'ollama' | 'openai' | 'openrouter' | 'groq' | 'google' | 'cerebras' | 'zyphra' | 'cohere' | 'sambanova' | 'mistral' | 'llama-server';
   model: string;
   maxTokens?: number;
   supportsToolUse?: boolean;
@@ -49,7 +49,9 @@ export interface AgentConfig {
   id: string;
   role: AgentRole;
   specialty: string;
+  /** @description Reference only — ModelRouter.resolve() controls actual model selection. */
   defaultModel: ModelRef;
+  /** @description Reference only — ModelRouter manages fallback chains. */
   fallbackModels: ModelRef[];
   maxTokens: number;
   timeoutMs: number;
@@ -77,10 +79,9 @@ export interface StageConfig {
   skipWhen?: (ctx: PipelineContext) => boolean;
   maxRetries?: number;
   /**
-   * Stages that can run in parallel with this one.
-   * When specified, these stages will execute concurrently using Promise.all.
+   * Roles of stages that must complete before this stage can start.
    */
-  parallelWith?: AgentRole[];
+  dependsOn?: AgentRole[];
 }
 
 export interface PipelineDefinition {
@@ -163,6 +164,8 @@ export type TaskStatus =
 export interface Task {
   id: string;
   type: 'pipeline' | 'agent' | 'research';
+  role?: AgentRole;
+  pipelineDefinition?: PipelineDefinition;
   input: string;
   priority: Priority;
   status: TaskStatus;
@@ -229,6 +232,10 @@ export interface PluginHostAPI {
   getStateStore(): IStateStore;
   /** Returns the singleton ToolRegistry */
   getToolRegistry(): ToolRegistry;
+  /** Returns the EventBus for low-level event subscription */
+  getEventBus(): unknown;
+  /** Returns the CLI CommandRegistry (if available) */
+  getCommandRegistry?(): unknown;
 }
 
 // === State Store Interface ===
@@ -240,6 +247,7 @@ export interface IStateStore {
   updateTask(id: string, patch: Partial<Task>): Promise<void>;
   getNextTask(): Promise<Task | null>;
   getTasksByStatus(status: TaskStatus): Promise<Task[]>;
+  countTasksByStatus(status: TaskStatus): Promise<number>;
   createAgentSession(session: AgentSession): Promise<void>;
   getAgentSession(id: string): Promise<AgentSession | null>;
   updateAgentSession(id: string, patch: Partial<AgentSession>): Promise<void>;
@@ -294,8 +302,10 @@ export interface StoredEvent {
 
 // === LLM Adapter ===
 export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool' | 'tool_use' | 'tool_result';
+  content?: string;
+  timestamp?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface LLMOptions {
@@ -313,6 +323,20 @@ export interface LLMResult {
   toolCalls?: ToolCall[];
 }
 
+/**
+ * LLM Adapter interface.
+ * Each provider (claude, nvidia-nim, ollama, llama-server, etc.) implements this.
+ */
+export interface LLMAdapter {
+  manifest: PluginManifest;
+  initialize(host: PluginHostAPI): Promise<void>;
+  activate(): Promise<void>;
+  deactivate(): Promise<void>;
+  unload(): Promise<void>;
+  supports(model: ModelRef): boolean;
+  prompt(model: ModelRef, messages: LLMMessage[], options: LLMOptions): Promise<LLMResult>;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -322,20 +346,6 @@ export interface ToolDefinition {
 export interface ToolCall {
   name: string;
   arguments: Record<string, unknown>;
-}
-
-export interface LLMAdapter extends Plugin {
-  prompt(
-    model: ModelRef,
-    messages: LLMMessage[],
-    options: LLMOptions,
-  ): Promise<LLMResult>;
-  stream?(
-    model: ModelRef,
-    messages: LLMMessage[],
-    options: LLMOptions,
-  ): AsyncGenerator<string>;
-  supports(model: ModelRef): boolean;
 }
 
 export interface ToolResult {
@@ -374,7 +384,7 @@ export interface MiuraConfig {
 export interface EventMap {
   'task.created': { taskId: string; priority: Priority; input: string };
   'task.queued': { taskId: string; position: number };
-  'task.running': { taskId: string; agentId: string };
+  'task.running': { taskId: string; agentId: string; };
   'task.completed': { taskId: string; result: AgentResult };
   'task.failed': { taskId: string; error: string; attempt: number };
   'agent.spawned': { agentId: string; role: AgentRole; model: ModelRef };
@@ -391,12 +401,73 @@ export interface EventMap {
   };
   'pipeline.completed': { pipelineId: string; result: PipelineResult };
   'pipeline.stuck': { pipelineId: string; detector: StuckSignal };
-  'pipeline.max_iterations': {
-    pipelineId: string;
-    iterations: number;
-  };
+  'pipeline.max_iterations': { pipelineId: string; iterations: number };
   'model.escalated': { from: ModelRef; to: ModelRef; reason: string };
   'plugin.loaded': { pluginId: string; type: PluginType };
-  'plugin.failed': { pluginId: string; error: string };
+  'plugin.failed': { pluginId: string; type: PluginType };
   'system.error': { error: string; source: string };
+}
+
+// === Compaction Types ===
+export interface CompactionOptions {
+  preserveSystem?: boolean;
+  preserveToolCalls?: boolean;
+  maxTokens?: number;
+  strategy?: string;
+}
+
+export interface CompactionResult {
+  compactedMessages: LLMMessage[];
+  removedMessages: LLMMessage[];
+  stats: {
+    originalCount: number;
+    compactedCount: number;
+    removedCount: number;
+    compressionRatio: number;
+    strategyUsed: string;
+    timestamp: string;
+  };
+}
+
+export interface CompactionStrategy {
+  compact(
+    messages: LLMMessage[], 
+    contextWindow: number, 
+    options?: CompactionOptions
+  ): CompactionResult;
+}
+
+export interface CompactionConfig {
+  strategy: 'no_compaction' | 'sliding_window' | 'summarize' | 'hybrid' | 'safe_split_point';
+  options?: {
+    windowSize?: number;
+    preserveSystem?: boolean;
+    thresholdMessages?: number;
+    keepMessages?: number;
+    useSummarizeForOlder?: boolean;
+  };
+}
+
+export interface SessionConfig {
+  compaction: CompactionConfig;
+  contextWindow: number;
+  maxMessages?: number;
+}
+
+export interface CompactionMetrics {
+  totalCompactions: number;
+  messagesBefore: number;
+  messagesAfter: number;
+  compressionRatio: number;
+  avgTimeMs: number;
+  strategyUsage: Record<string, number>;
+  contextWindowUsage: number;
+  lastCompactionTime: string;
+}
+
+export interface CompactionReport {
+  strategy: string;
+  config: any;
+  metrics: CompactionMetrics;
+  recommendations?: string[];
 }

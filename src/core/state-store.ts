@@ -15,6 +15,7 @@ export abstract class StateStore implements IStateStore {
   abstract updateTask(id: string, patch: Partial<Task>): Promise<void>;
   abstract getNextTask(): Promise<Task | null>;
   abstract getTasksByStatus(status: TaskStatus): Promise<Task[]>;
+  abstract countTasksByStatus(status: TaskStatus): Promise<number>;
 
   // Agent sessions
   abstract createAgentSession(session: AgentSession): Promise<void>;

@@ -1,11 +1,15 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const CONTEXT_BUILDER_CONFIG: AgentConfig = {
   id: 'agent-context-builder',
   role: 'context-builder' as AgentRole,
   specialty: 'Builds and maintains project context. Reads codebase, Engram memory, and external docs to assemble rich context for other agents.',
-  defaultModel: { provider: 'claude', model: 'opus', maxTokens: 32_768, supportsToolUse: true, supportsStreaming: true },
-  fallbackModels: [{ provider: 'nvidia-nim', model: 'kimi-k2.5' }],
+  defaultModel: { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7', maxTokens: 32_768 },
+  fallbackModels: [
+    { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash' },
+    { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
+  ],
   maxTokens: 32_768,
   timeoutMs: 120_000,
   capabilities: ['context'] as AgentCapability[],

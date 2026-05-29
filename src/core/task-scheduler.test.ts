@@ -11,7 +11,7 @@ describe('TaskScheduler', () => {
   });
 
   it('creates a task with generated id', () => {
-    const task = scheduler.createTask('fix the login bug', 'pipeline', 'high');
+    const task = scheduler.createTask('fix the login bug', 'pipeline', { priority: 'high' });
 
     expect(task.id).toBeTruthy();
     expect(task.input).toBe('fix the login bug');
@@ -20,16 +20,16 @@ describe('TaskScheduler', () => {
   });
 
   it('deduplicates identical tasks', () => {
-    const t1 = scheduler.createTask('fix the login bug', 'pipeline', 'high');
-    const t2 = scheduler.createTask('fix the login bug', 'pipeline', 'high');
+    const t1 = scheduler.createTask('fix the login bug', 'pipeline', { priority: 'high' });
+    const t2 = scheduler.createTask('fix the login bug', 'pipeline', { priority: 'high' });
 
     expect(t1.id).toBe(t2.id);
   });
 
   it('respects priority ordering', () => {
-    scheduler.createTask('low task', 'pipeline', 'low');
-    scheduler.createTask('high task', 'pipeline', 'high');
-    scheduler.createTask('medium task', 'pipeline', 'medium');
+    scheduler.createTask('low task', 'pipeline', { priority: 'low' });
+    scheduler.createTask('high task', 'pipeline', { priority: 'high' });
+    scheduler.createTask('medium task', 'pipeline', { priority: 'medium' });
 
     const next = scheduler.getNext();
     expect(next).toBeDefined();

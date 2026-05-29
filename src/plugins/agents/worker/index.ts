@@ -1,13 +1,14 @@
 import type { AgentCapability, AgentConfig, AgentRole, Plugin, PluginHostAPI } from '../../../core/types.js';
 
+// NOTE: defaultModel/fallbackModels are reference only — ModelRouter.resolve() controls actual routing.
 export const WORKER_CONFIG: AgentConfig = {
   id: 'agent-worker',
   role: 'worker' as AgentRole,
   specialty: 'Pure implementation of already-planned tasks. Writes clean, correct code following the plan.',
-  defaultModel: { provider: 'claude', model: 'sonnet', maxTokens: 65_536, supportsToolUse: true, supportsStreaming: true },
+  defaultModel: { provider: 'nvidia-nim', model: 'qwen/qwen3-coder-480b-a35b-instruct', maxTokens: 65_536 },
   fallbackModels: [
-    { provider: 'nvidia-nim', model: 'deepseek-v4-pro' },
-    { provider: 'ollama', model: 'qwen3' },
+    { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-pro' },
+    { provider: 'nvidia-nim', model: 'moonshotai/kimi-k2.6' },
   ],
   maxTokens: 65_536,
   timeoutMs: 300_000,

@@ -24,6 +24,9 @@ import { ContextBuilderAgent } from './plugins/agents/context-builder/index.js';
 import { OracleAgent } from './plugins/agents/oracle/index.js';
 import { DelegateAgent } from './plugins/agents/delegate/index.js';
 
+import { LlamaServerManager } from './plugins/providers/llama-server/index.js';
+import { LlamaAdapter } from './plugins/adapters/llama-server/index.js';
+
 // Adapter plugins
 import { ClaudeAdapter } from './plugins/adapters/claude/index.js';
 import { NvidiaNimAdapter } from './plugins/adapters/nvidia-nim/index.js';
@@ -42,6 +45,10 @@ import { SqliteStateStore } from './plugins/memory/sqlite-state/index.js';
 
 // Integration plugins
 import { EngramReaderPlugin } from './plugins/integrations/engram-reader/index.js';
+import { SkillManagerPlugin } from './plugins/knowledge/skill-manager/index.js';
+import { CompactionManagerPlugin } from './plugins/compaction/compaction-manager-plugin.js';
+import { OpenSpecManagerPlugin } from './plugins/knowledge/openspec/index.js';
+import { MCPClientPlugin } from './plugins/integrations/mcp-client/index.js';
 
 import type {
   AgentRole,
@@ -57,6 +64,8 @@ import type {
   PipelineMetrics,
   Plugin,
   PluginType,
+  Priority,
+  Task,
   ToolCall,
   ToolResult,
 } from './core/types.js';
@@ -89,6 +98,7 @@ export class MiuraSwarm {
 
   private agentPlugins = new Map<AgentRole, Plugin & { getConfig(): AgentConfig; getSystemPrompt(): string }>();
   private adapterMap = new Map<string, LLMAdapter>();
+  private llamaServerManager: LlamaServerManager | null = null;
 
   constructor(private config: MiuraSwarmConfig = {}) {
     this.eventBus = new EventBus();
@@ -148,7 +158,39 @@ export class MiuraSwarm {
       }
     }
 
+    // Register llama-server adapter (local inference — no API key needed)
+    const llamaServerPath = process.env.MIURA_LLAMA_SERVER_PATH;
+    const llamaModelPath = process.env.MIURA_LLAMA_MODEL_PATH;
+    if (llamaServerPath && llamaModelPath) {
+      try {
+        const manager = new LlamaServerManager({
+          serverPath: llamaServerPath,
+          modelPath: llamaModelPath,
+          port: parseInt(process.env.MIURA_LLAMA_PORT ?? '8050', 10),
+          contextSize: parseInt(process.env.MIURA_LLAMA_CONTEXT ?? '8192', 10),
+          gpuLayers: parseInt(process.env.MIURA_LLAMA_GPU_LAYERS ?? '99', 10),
+        });
+
+        await manager.start();
+        this.llamaServerManager = manager;
+
+        const adapter = new LlamaAdapter({
+          baseUrl: `http://127.0.0.1:${manager.port}`,
+          serverManager: manager,
+        });
+        await this.pluginHost.register(adapter);
+        this.adapterMap.set('llama-server', adapter);
+        this.logger.log({ timestamp: Date.now(), level: 'info', event: 'llama-server', metadata: { port: manager.port, model: manager.modelPath } });
+      } catch (err) {
+        this.logger.log({ timestamp: Date.now(), level: 'warn', event: 'llama-server-init-failed', error: String(err) });
+      }
+    }
+
     await this.pluginHost.register(new EngramReaderPlugin());
+    await this.pluginHost.register(new SkillManagerPlugin());
+    await this.pluginHost.register(new CompactionManagerPlugin());
+    await this.pluginHost.register(new OpenSpecManagerPlugin());
+    await this.pluginHost.register(new MCPClientPlugin());
 
     for (const plugin of (this.config.plugins ?? [])) {
       await this.pluginHost.register(plugin);
@@ -172,6 +214,35 @@ export class MiuraSwarm {
     });
 
     this.initialized = true;
+  }
+
+  /**
+   * Submit a task to the system for scheduled execution.
+   */
+  async submitTask(
+    input: string,
+    type: Task['type'],
+    options: {
+      priority?: Priority;
+      role?: AgentRole;
+      pipelineDefinition?: PipelineDefinition;
+    } = {},
+  ): Promise<Task> {
+    this.ensureInitialized();
+    const task = this.taskScheduler.createTask(input, type, options);
+    
+    // Persist initial state in store
+    await this.stateStore.createTask({
+      type: task.type,
+      input: task.input,
+      status: task.status,
+      priority: task.priority,
+      role: task.role,
+      pipelineDefinition: task.pipelineDefinition,
+      attempt: task.attempt,
+    });
+    
+    return task;
   }
 
   async runAgent(role: AgentRole, input: string, forcedModel?: ModelRef): Promise<AgentResult> {
@@ -362,13 +433,19 @@ export class MiuraSwarm {
     return result;
   }
 
-  getStatus(): MiuraSwarmStatus {
+  async getStatus(): Promise<MiuraSwarmStatus> {
     this.ensureInitialized();
+    const [pending, active, completed, failed] = await Promise.all([
+      this.stateStore.countTasksByStatus('queued'),
+      this.stateStore.countTasksByStatus('running'),
+      this.stateStore.countTasksByStatus('completed'),
+      this.stateStore.countTasksByStatus('failed'),
+    ]);
     return {
       agents: Array.from(this.agentPlugins.entries()).map(([role, p]) => ({
         role, id: p.getConfig().id, active: true,
       })),
-      tasks: { pending: 0, active: 0, completed: 0, failed: 0 },
+      tasks: { pending, active, completed, failed },
       plugins: this.pluginHost.getAllPlugins().map(p => ({
         id: p.manifest.id, type: p.manifest.type, active: p.status === 'active',
       })),
@@ -380,12 +457,28 @@ export class MiuraSwarm {
   getEventBus(): EventBus { return this.eventBus; }
   getPluginHost(): PluginHost { return this.pluginHost; }
   getAdapters(): Map<string, LLMAdapter> { return this.adapterMap; }
+  getSkillManager(): SkillManagerPlugin | undefined {
+    return this.pluginHost.getPlugin('skill-manager') as SkillManagerPlugin | undefined;
+  }
+
+  getCompactionManager(): CompactionManagerPlugin | undefined {
+    return this.pluginHost.getPlugin('compaction-manager') as CompactionManagerPlugin | undefined;
+  }
+
+  getOpenSpecManager(): OpenSpecManagerPlugin | undefined {
+    return this.pluginHost.getPlugin('openspec-manager') as OpenSpecManagerPlugin | undefined;
+  }
+
+  getMCPClient(): MCPClientPlugin | undefined {
+    return this.pluginHost.getPlugin('mcp-client') as MCPClientPlugin | undefined;
+  }
 
   async shutdown(): Promise<void> {
     if (!this.initialized) return;
     for (const p of this.pluginHost.getAllPlugins()) {
       if (p.status === 'active') await this.pluginHost.unregister(p.manifest.id);
     }
+    await this.llamaServerManager?.stop();
     await this.stateStore.close();
     this.initialized = false;
   }
@@ -447,5 +540,7 @@ export { SambaNovaAdapter } from './plugins/adapters/sambanova/index.js';
 export { MistralAdapter } from './plugins/adapters/mistral/index.js';
 export { ClaudeAdapter } from './plugins/adapters/claude/index.js';
 export { OllamaAdapter } from './plugins/adapters/ollama/index.js';
+export { LlamaAdapter } from './plugins/adapters/llama-server/index.js';
+export { LlamaServerManager } from './plugins/providers/llama-server/index.js';
 export { loadEnv } from './env.js';
 export * from './core/types.js';

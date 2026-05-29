@@ -8,12 +8,15 @@ import type {
 } from './types.js';
 import { EventBus } from './event-bus.js';
 import { ToolRegistry } from './tool-registry.js';
+import type { CommandRegistry as CLICommandRegistry } from '../cli/command-registry.js';
 
 interface RegisteredPlugin {
   plugin: Plugin;
   status: PluginStatus;
   error?: Error;
 }
+
+export type { Plugin, PluginType } from './types.js';
 
 export class PluginHost implements PluginHostAPI {
   private plugins = new Map<string, RegisteredPlugin>();
@@ -153,6 +156,14 @@ export class PluginHost implements PluginHostAPI {
 
   getToolRegistry(): ToolRegistry {
     return this.toolRegistry;
+  }
+
+  getEventBus(): EventBus {
+    return this.eventBus;
+  }
+
+  getCommandRegistry(): CLICommandRegistry | undefined {
+    return undefined; // CLI command registry is set externally via setCommandRegistry
   }
 
   private validateManifest(manifest: PluginManifest): void {
