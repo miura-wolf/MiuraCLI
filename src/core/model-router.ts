@@ -6,63 +6,54 @@ import { getGlobalRotator } from './api-key-rotator.js';
 export const DEFAULT_ROUTING: ModelRoutingConfig = {
   defaults: {
     // Planner: needs strong reasoning for architecture decisions
-    planner: { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash', maxTokens: 32_768 },
-    // Worker: needs best coding model — qwen3-coder is king
-    worker: { provider: 'nvidia-nim', model: 'qwen/qwen3-coder-480b-a35b-instruct', maxTokens: 65_536 },
+    planner: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 32_768 },
+    // Worker: needs coding strength
+    worker: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 65_536 },
     // Researcher: needs reasoning + broad knowledge
-    researcher: { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-pro', maxTokens: 32_768 },
+    researcher: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 32_768 },
     // Reviewer: needs strong reasoning, mid-size is fine
-    reviewer: { provider: 'nvidia-nim', model: 'z-ai/glm-5.1', maxTokens: 16_384 },
+    reviewer: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 16_384 },
     // Scout: needs speed for quick lookups
-    scout: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 8_192 },
+    scout: { provider: 'groq', model: 'qwen/qwen3-32b', maxTokens: 8_192 },
     // Context builder: needs reasoning + context assembly
-    'context-builder': { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7', maxTokens: 32_768 },
+    'context-builder': { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 32_768 },
     // Oracle: needs the deepest reasoning for tradeoff decisions
-    oracle: { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-pro', maxTokens: 16_384 },
+    oracle: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 16_384 },
     // Delegate: needs to understand and route tasks
-    delegate: { provider: 'nvidia-nim', model: 'google/gemma-4-31b-it', maxTokens: 8_192 },
+    delegate: { provider: 'groq', model: 'llama-3.3-70b-versatile', maxTokens: 8_192 },
   },
   fallbacks: {
     planner: [
-      { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
-      { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
-      { provider: 'openrouter', model: 'qwen/qwen3-coder:free' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     worker: [
-      { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-pro' },
-      { provider: 'nvidia-nim', model: 'moonshotai/kimi-k2.6' },
-      { provider: 'openrouter', model: 'qwen/qwen3-coder:free' },
-      { provider: 'nvidia-nim', model: 'qwen/qwen3.5-397b-a17b' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     researcher: [
-      { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash' },
-      { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
-      { provider: 'openrouter', model: 'nvidia/nemotron-3-super-120b-a12b:free' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     reviewer: [
-      { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash' },
-      { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     scout: [
-      { provider: 'groq', model: 'qwen/qwen3-32b' },
-      { provider: 'cerebras', model: 'llama3.1-8b' },
-      { provider: 'nvidia-nim', model: 'google/gemma-4-31b-it' },
+      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     'context-builder': [
-      { provider: 'nvidia-nim', model: 'deepseek-ai/deepseek-v4-flash' },
-      { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     oracle: [
-      { provider: 'nvidia-nim', model: 'z-ai/glm-5.1' },
-      { provider: 'nvidia-nim', model: 'minimaxai/minimax-m2.7' },
-      { provider: 'openrouter', model: 'nousresearch/hermes-3-llama-3.1-405b:free' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
     delegate: [
-      { provider: 'groq', model: 'llama-3.3-70b-versatile' },
-      { provider: 'zyphra', model: 'zyphra/ZAYA1-8B' },
-      { provider: 'cerebras', model: 'llama3.1-8b' },
+      { provider: 'groq', model: 'qwen/qwen3-32b' },
+      { provider: 'ollama', model: 'qwen2.5-coder-7b' },
     ],
   },
   capabilities: {
