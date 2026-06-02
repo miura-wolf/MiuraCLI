@@ -14,6 +14,7 @@ import type {
 	ToolDefinition,
 	ChatChunk,
 } from "../../core/types.js";
+import { tryRepairJson } from "../../core/json-repair.js";
 
 // Re-export ChatChunk so adapters that import from openai-compat don't
 // have to dig into core/types for the streaming shape.
@@ -74,25 +75,31 @@ function toWireToolCall(call: ToolCall, index: number): WireToolCall {
 
 /**
  * Parse the `tool_calls` array from a response message into internal
- * ToolCalls, preserving each provider-assigned id and tolerating
- * non-JSON argument strings.
+ * ToolCalls, preserving each provider-assigned id.
+ *
+ * Argument strings go through `tryRepairJson`, which handles the common
+ * small-model mistakes (trailing commas, single quotes, unquoted keys,
+ * JS comments, Python booleans). If even repair can't parse the input,
+ * the call is flagged with `invalidArgs` so the runAgent loop can
+ * surface the error to the model and let it self-correct.
  */
 export function parseToolCalls(
 	rawToolCalls: WireToolCall[] | undefined | null,
 ): ToolCall[] {
 	if (!rawToolCalls || rawToolCalls.length === 0) return [];
 	return rawToolCalls.map((tc, index) => {
-		let args: Record<string, unknown>;
-		try {
-			args = JSON.parse(tc.function.arguments || "{}");
-		} catch {
-			// Small models sometimes emit non-JSON args — keep the raw string.
-			args = { _raw: tc.function.arguments };
+		const id = tc.id ?? `call_${index}`;
+		const name = tc.function.name;
+		const received = tc.function.arguments || "";
+		const parsed = tryRepairJson<Record<string, unknown>>(received);
+		if (parsed.ok) {
+			return { id, name, arguments: parsed.value };
 		}
 		return {
-			id: tc.id ?? `call_${index}`,
-			name: tc.function.name,
-			arguments: args,
+			id,
+			name,
+			arguments: {},
+			invalidArgs: { reason: parsed.error, received },
 		};
 	});
 }

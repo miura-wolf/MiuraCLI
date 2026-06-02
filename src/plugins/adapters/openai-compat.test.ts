@@ -88,12 +88,45 @@ describe("openai-compat: parseToolCalls", () => {
 		]);
 	});
 
-	it("keeps the raw string when arguments are not valid JSON", () => {
+	it("flags invalidArgs when arguments can't be parsed or repaired", () => {
 		const raw: WireToolCall[] = [
 			{ id: "c1", function: { name: "bad", arguments: "not-json" } },
 		];
 		const calls = parseToolCalls(raw);
-		expect(calls[0].arguments).toEqual({ _raw: "not-json" });
+		expect(calls[0].arguments).toEqual({});
+		expect(calls[0].invalidArgs).toBeDefined();
+		expect(calls[0].invalidArgs!.received).toBe("not-json");
+		expect(typeof calls[0].invalidArgs!.reason).toBe("string");
+	});
+
+	it("repairs common small-model JSON mistakes (trailing comma + unquoted key + comment)", () => {
+		const raw: WireToolCall[] = [
+			{
+				id: "c1",
+				function: {
+					name: "read_file",
+					arguments: '{file_path: "a.ts", // comment\n limit: 50,}',
+				},
+			},
+		];
+		const calls = parseToolCalls(raw);
+		expect(calls[0].invalidArgs).toBeUndefined();
+		expect(calls[0].arguments).toEqual({ file_path: "a.ts", limit: 50 });
+	});
+
+	it("repairs single-quoted Python-style arguments", () => {
+		const raw: WireToolCall[] = [
+			{
+				id: "c1",
+				function: {
+					name: "grep",
+					arguments: "{'pattern': '*.ts', 'recursive': True}",
+				},
+			},
+		];
+		const calls = parseToolCalls(raw);
+		expect(calls[0].invalidArgs).toBeUndefined();
+		expect(calls[0].arguments).toEqual({ pattern: "*.ts", recursive: true });
 	});
 
 	it("returns an empty array for missing tool_calls", () => {

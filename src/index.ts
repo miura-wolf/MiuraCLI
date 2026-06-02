@@ -14,6 +14,7 @@ import { StructuredLogger, MetricsCollector } from "./core/observability.js";
 import { getRuntimeConfig } from "./config.js";
 import { buildSystemPrompt } from "./core/context-builder.js";
 import { isStreamingEnabled } from "./core/streaming-service.js";
+import { executeToolCalls } from "./core/tool-executor.js";
 
 // Agent plugins
 import { PlannerAgent } from "./plugins/agents/planner/index.js";
@@ -431,8 +432,14 @@ export class MiuraSwarm {
 						break;
 					}
 
-					// Execute all tool calls with error handling
-					const toolResults = await registry.execute(llmResult.toolCalls);
+					// Execute tool calls, short-circuiting any whose arguments
+					// couldn't be parsed/repaired — the model gets a clear
+					// error message back and can self-correct next turn.
+					// See core/tool-executor.ts for the slot-based split.
+					const toolResults = await executeToolCalls(
+						registry,
+						llmResult.toolCalls,
+					);
 					lastToolCalls = [...llmResult.toolCalls];
 					lastToolResults = toolResults;
 

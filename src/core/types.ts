@@ -404,6 +404,13 @@ export interface ToolCall {
 	id?: string;
 	name: string;
 	arguments: Record<string, unknown>;
+	/**
+	 * Set when the model's tool-call arguments couldn't be parsed as
+	 * JSON, even after repair. The runAgent loop short-circuits execution
+	 * for these calls and surfaces `invalidArgs.reason` to the model as
+	 * the tool result so it can self-correct on the next turn.
+	 */
+	invalidArgs?: { reason: string; received: string };
 }
 
 export interface ToolResult {
