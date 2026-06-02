@@ -100,9 +100,11 @@ export const DEFAULT_ROUTING: ModelRoutingConfig = {
 			maxTokens: 32_768,
 		},
 		chat: {
+			// Coder-specialized: best tool-use + agentic on the free tier.
+			// Reasoning 49B was too slow/verbose for interactive chat.
 			provider: "nvidia-nim",
-			model: "nvidia/llama-3.3-nemotron-super-49b-v1",
-			maxTokens: 4096,
+			model: "qwen/qwen3-coder-480b-a35b-instruct",
+			maxTokens: 8192,
 		},
 		oracle: {
 			provider: "nvidia-nim",
@@ -122,7 +124,11 @@ export const DEFAULT_ROUTING: ModelRoutingConfig = {
 		reviewer: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
 		scout: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
 		"context-builder": [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
-		chat: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
+		chat: [
+			{ provider: "ollama", model: "qwen2.5-coder-7b" },
+			{ provider: "lmstudio", model: "qwen2.5-coder-7b" },
+			{ provider: "llama-server", model: "qwen2.5-coder-7b-q4_k_m" },
+		],
 		oracle: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
 		delegate: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
 	},

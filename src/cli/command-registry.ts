@@ -680,6 +680,7 @@ export class CommandRegistry {
 					"sambanova",
 					"mistral",
 					"llama-server",
+					"lmstudio",
 				];
 
 				const parts = args.trim().split(/\s+/).filter(Boolean);

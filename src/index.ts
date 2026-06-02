@@ -32,6 +32,7 @@ import { LlamaAdapter } from "./plugins/adapters/llama-server/index.js";
 import { ClaudeAdapter } from "./plugins/adapters/claude/index.js";
 import { NvidiaNimAdapter } from "./plugins/adapters/nvidia-nim/index.js";
 import { OllamaAdapter } from "./plugins/adapters/ollama/index.js";
+import { LMStudioAdapter } from "./plugins/adapters/lmstudio/index.js";
 import { OpenRouterAdapter } from "./plugins/adapters/openrouter/index.js";
 import { GroqAdapter } from "./plugins/adapters/groq/index.js";
 import { GoogleAIAdapter } from "./plugins/adapters/google-ai/index.js";
@@ -187,11 +188,21 @@ export class MiuraSwarm {
 			{ provider: "mistral", ctor: MistralAdapter, envKey: "MISTRAL_API_KEY" },
 			{ provider: "claude", ctor: ClaudeAdapter, envKey: "CLAUDE_API_KEY" },
 			{ provider: "ollama", ctor: OllamaAdapter, envKey: "OLLAMA_BASE_URL" },
+			{
+				provider: "lmstudio",
+				ctor: LMStudioAdapter,
+				envKey: "LMSTUDIO_BASE_URL",
+			},
 		];
+
+		// Local providers that don't need an API key. They will still fail
+		// at first prompt() if the server is offline — that's the right
+		// failure mode, surfacing the error to the user.
+		const LOCAL_PROVIDERS = new Set(["ollama", "lmstudio"]);
 
 		for (const { provider, ctor, envKey } of adapterDefs) {
 			const apiKey = process.env[envKey];
-			const hasKey = provider === "ollama" ? true : Boolean(apiKey);
+			const hasKey = LOCAL_PROVIDERS.has(provider) ? true : Boolean(apiKey);
 			if (!hasKey) continue;
 
 			try {

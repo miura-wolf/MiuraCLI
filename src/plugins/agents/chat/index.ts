@@ -12,11 +12,22 @@ export const CHAT_CONFIG: AgentConfig = {
 	specialty:
 		"Versatile coding assistant: directory audits, file exploration, code reviews, and general tasks. Uses tools to actually DO things.",
 	defaultModel: {
+		// Coder-specialized, agentic + tool_use capable. Primary stays on
+		// NVIDIA NIM because the free tier is fast and has the best
+		// tool-use reliability for a chat agent. The reasoning 49B model
+		// was too verbose/slow for interactive coding.
 		provider: "nvidia-nim",
-		model: "nvidia/llama-3.3-nemotron-super-49b-v1",
+		model: "qwen/qwen3-coder-480b-a35b-instruct",
 		maxTokens: 8192,
 	},
-	fallbackModels: [{ provider: "ollama", model: "qwen2.5-coder-7b" }],
+	// Local-first safety net: ollama → lmstudio → llama-server, in that
+	// order. If nvidia-nim is unreachable, the agent keeps working on
+	// the same model family on the user's machine.
+	fallbackModels: [
+		{ provider: "ollama", model: "qwen2.5-coder-7b" },
+		{ provider: "lmstudio", model: "qwen2.5-coder-7b" },
+		{ provider: "llama-server", model: "qwen2.5-coder-7b-q4_k_m" },
+	],
 	maxTokens: 8192,
 	timeoutMs: 60_000,
 	capabilities: [
