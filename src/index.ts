@@ -12,6 +12,7 @@ import { Pipeline } from "./core/pipeline.js";
 import { ModelRouter, DEFAULT_ROUTING } from "./core/model-router.js";
 import { StructuredLogger, MetricsCollector } from "./core/observability.js";
 import { getRuntimeConfig } from "./config.js";
+import { buildSystemPrompt } from "./core/context-builder.js";
 
 // Agent plugins
 import { PlannerAgent } from "./plugins/agents/planner/index.js";
@@ -359,9 +360,18 @@ export class MiuraSwarm {
 			async (cfg: AgentConfig, sessionId: string) => {
 				const startTime = Date.now();
 
+				// Build the system prompt with dynamic project context
+				// (cwd, git, tree, CLAUDE.md, brain, matched skills) on top
+				// of the agent's own base prompt. See core/context-builder.ts.
+				const composed = await buildSystemPrompt(
+					agentPlugin.getSystemPrompt(),
+					input,
+					{ host: this },
+				);
+
 				// Build initial conversation
 				const chat: LLMMessage[] = [
-					{ role: "system", content: agentPlugin.getSystemPrompt() },
+					{ role: "system", content: composed.prompt },
 					{ role: "user", content: input },
 				];
 
