@@ -7,6 +7,7 @@ import { isIP } from "node:net";
 import { getRuntimeConfig, isCommandAllowed } from "../../config.js";
 
 import { getDiffApprovalService } from "../../core/diff-approval.js";
+import { truncateToolOutput, TOOL_LIMITS } from "../../core/tool-limits.js";
 
 // Safety: restrict to current working directory and below
 function safeJoin(base: string, target: string): string {
@@ -158,11 +159,15 @@ export const readFileTool: ToolHandler = {
 		const abs = safeJoin(cwd, file_path);
 		const data = await fs.readFile(abs, "utf-8");
 		const lines = data.split(/\r?\n/);
-		const slice = lines.slice(
-			offset as number,
-			(offset as number) + (limit ?? lines.length),
-		);
-		return { name: "read_file", output: slice.join("\n"), durationMs: 0 };
+		// Default cap when the caller doesn't pass `limit`: respect the
+		// tool's maxLines so a single read can't blow the context.
+		// When the caller does pass `limit`, honour it (they know what
+		// they want; the safety-net cap below still applies).
+		const effectiveLimit =
+			typeof limit === "number" ? limit : TOOL_LIMITS.read_file.maxLines!;
+		const slice = lines.slice(offset as number, offset as number + effectiveLimit);
+		const truncated = truncateToolOutput("read_file", slice.join("\n"));
+		return { name: "read_file", output: truncated.output, durationMs: 0 };
 	},
 };
 
@@ -409,7 +414,8 @@ export const grepTool: ToolHandler = {
 			}
 		}
 
-		return { name: "grep", output: allMatches.join("\n"), durationMs: 0 };
+		const truncated = truncateToolOutput("grep", allMatches.join("\n"));
+		return { name: "grep", output: truncated.output, durationMs: 0 };
 	},
 };
 
@@ -446,7 +452,8 @@ export const globTool: ToolHandler = {
 				files = [];
 			}
 		}
-		return { name: "glob", output: files.join("\n"), durationMs: 0 };
+		const truncated = truncateToolOutput("glob", files.join("\n"));
+		return { name: "glob", output: truncated.output, durationMs: 0 };
 	},
 };
 
@@ -528,7 +535,8 @@ export const shellTool: ToolHandler = {
 			proc.on("error", reject);
 		});
 
-		return { name: "run_shell_command", output: output.trim(), durationMs: 0 };
+		const truncated = truncateToolOutput("run_shell_command", output.trim());
+		return { name: "run_shell_command", output: truncated.output, durationMs: 0 };
 	},
 };
 
@@ -582,7 +590,8 @@ export const webFetchTool: ToolHandler = {
 		}
 
 		const text = await response.text();
-		return { name: "web_fetch", output: text, durationMs: 0 };
+		const truncated = truncateToolOutput("web_fetch", text);
+		return { name: "web_fetch", output: truncated.output, durationMs: 0 };
 	},
 };
 
