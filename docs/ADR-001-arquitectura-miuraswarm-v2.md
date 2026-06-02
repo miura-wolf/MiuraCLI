@@ -241,12 +241,12 @@ CREATE INDEX idx_skills_triggers ON skills(pack, triggers);
 
 ```typescript
 interface LlamaServerConfig {
-  modelPath: string;         // D:\IA\GGUF\modelos\qwen2.5-coder-7b-q4_k_m.gguf
+  modelPath: string;         // D:\IA\GGUF\gguf\qwen2.5-coder-7b-q4_k_m.gguf
   modelId: string;           // qwen2.5-coder-7b-instruct-q4_k_m
   contextSize: number;       // 8192 (13B) o 32768 (7B Q4_K_M)
   gpuLayers: number;         // 99 = todos en GPU
   threads: number;           // 0 = auto
-  port: number;             // 8080 default
+  port: number;             // 8050 default
   nParallel: number;        // 1 para CLI interactivo
   flashAttention: boolean;  // true si el modelo lo soporta
 }
@@ -282,7 +282,7 @@ interface ServerHealth {
 | **Qwen2.5-Coder-7B** | 4.4GB | Q4_K_M | 15-25 tok/s | Coding agent principal |
 | **Qwen2.5-14B** | 8.5GB | Q4_K_M | 8-15 tok/s | Análisis complejo |
 | **DeepSeek-Coder-6.7B** | 3.9GB | Q5_K_M | 18-28 tok/s | Alternativa coding |
-| **Mistral-Nemo-12B** | 7.1GB | Q4_K_M | 10-18 tok/s |通用 |
+| **Mistral-Nemo-12B** | 7.1GB | Q4_K_M | 10-18 tok/s | Propósito general |
 | **Phi-3.5-mini-128k** | 2.3GB | Q4_K_M | 20-35 tok/s | Tareas rápidas |
 | **Llama-3.2-3B** | 1.8GB | Q4_K_M | 25-40 tok/s | Scout, context-builder |
 
@@ -469,7 +469,7 @@ El Brain se actualiza **automáticamente** cuando:
 - El agente detecta un bug known issue y aplica un fix
 - El oracle toma una decisión técnica explícita
 
-El agente detecta patrones en el output y предложит guardar en Brain.
+El agente detecta patrones en el output y propondrá guardar en Brain.
 
 ---
 
@@ -582,7 +582,7 @@ interface IndexStats {
 
 - Usa `fs.watch` o `chokidar` para detectar cambios
 - Debounce de 2s antes de re-indexar
-- Si el archivo cambió durante el debounce, se累计a el cambio
+- Si el archivo cambió durante el debounce, se acumula el cambio
 - Banner de "stale index" si pasaron >10s sin sync
 
 ---
@@ -883,7 +883,7 @@ type PluginType =
 
 Gentle-AI (Go, 93.1%) es la fuente de referencia para varios patrones que debemos implementar:
 
-**Delegation Triggers** (薄 orchestrator):
+**Delegation Triggers** (thin orchestrator):
 ```
 | Trigger                              | Expected Behavior              |
 |--------------------------------------|--------------------------------|
@@ -1295,12 +1295,7 @@ cli:
 
 ---
 
-### P2 | ¿Backup system de Gentle-AI? | Integrar en MiuraSwarm / Solo para proyectos críticos | Complemento al state store |
-| P3 | ¿Formato de specs: `.miura/` o `.openspec/`? | Dual support / Solo `.miura/` | OpenSpec compat lo sugiere |
-
----
-
-## 18. Plan de Implementación (8 Fases)
+## 17. Plan de Implementación (8 Fases)
 
 ### Convenciones del plan
 
@@ -1432,7 +1427,7 @@ src/cli/
 
 > explain the EventBus
   → No es slash command
-  → SeTreata como /chat con history
+  → Se trata como /chat con history
   → Streaming output
 ```
 
@@ -1595,7 +1590,7 @@ graph_search(query: string)
 **File watcher**:
 ```typescript
 // fs.watch con debounce de 2s
-// Si archivo cambió durante debounce →累计ar cambios
+// Si archivo cambió durante debounce → acumular cambios
 // Si index está stale (>10s sin sync) → mostrar banner
 ```
 
@@ -1771,7 +1766,7 @@ interface SafeSplitPoint {
 - [ ] Evento `session.compacted` cuando compacta
 - [ ] `bun test` pasa
 
-**Depende de**: Fase 2 ✅ (puede並行 con 3, 4, 5)
+**Depende de**: Fase 2 ✅ (puede paralelizarse con 3, 4, 5)
 
 ---
 
@@ -1970,6 +1965,12 @@ Fase 0 ──► Fase 1 ──► Fase 2 ─────────────
                                                                    (Go bridge)
 ```
 
+---
+
+## 18. Análisis de Costos y Decisiones de Diseño
+
+### 18.0 Decisiones de Diseño (resueltas)
+
 | # | Pregunta | Decisión | Justificación |
 |---|----------|---------|---------------|
 | 1 | Streaming en REPL | **ON por defecto, toggle con `/debug`** | Feedback inmediato con modelos locales (15-25 tok/s). Sin streaming parece colgado. Con blessed se renderiza bien. |
@@ -1978,7 +1979,7 @@ Fase 0 ──► Fase 1 ──► Fase 2 ─────────────
 | 4 | Brain auto-capture | **Híbrido inteligente** | Auto-capture en commits (workaround, fix), decisiones explícitas oracle. Ofrecer captura en stuck detection. Nunca auto-capture todo. Via `brain_capture_decision()` tool. |
 | 5 | MCP client o server | **Client primero** | Consumir herramientas externas (filesystem, git, web) es necesidad inmediata. Server viene después — requiere MiuraSwarm accesible como daemon. |
 
-### 17.1 Modelo de Costo de Tokens
+### 18.1 Modelo de Costo de Tokens
 
 ```
 Contexto de proyecto típico por turno:
@@ -2016,7 +2017,7 @@ Con ventana 32K (Qwen2.5-Coder-7B Q4_K_M):
 
 **60x más barato que cloud** computando costo eléctrico vs. API.
 
-### 17.2 Decisiones Pendientes (requieren validación durante implementación)
+### 18.2 Decisiones Pendientes (requieren validación durante implementación)
 
 | # | Pregunta | Opciones | Notas |
 |---|----------|---------|-------|

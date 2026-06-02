@@ -8,8 +8,32 @@ import type {
   PluginHostAPI,
   ToolCall,
 } from '../../../core/types.js';
+import { toOpenAITools } from '../openai-compat.js';
 
 const OLLAMA_BASE_URL = 'http://localhost:11434';
+
+/**
+ * Map internal messages to Ollama's native /api/chat format. Unlike the
+ * OpenAI wire protocol, Ollama carries tool-call arguments as objects (not
+ * JSON strings) and does not use tool_call_id, so it needs its own mapper.
+ */
+function toOllamaMessages(messages: LLMMessage[]): Array<Record<string, unknown>> {
+  return messages.map((m) => {
+    if (m.role === 'tool' || m.role === 'tool_result') {
+      return { role: 'tool', content: m.content ?? '' };
+    }
+    if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
+      return {
+        role: 'assistant',
+        content: m.content ?? '',
+        tool_calls: m.toolCalls.map((c) => ({
+          function: { name: c.name, arguments: c.arguments ?? {} },
+        })),
+      };
+    }
+    return { role: m.role, content: m.content ?? '' };
+  });
+}
 
 export class OllamaAdapter implements LLMAdapter {
   manifest = {
@@ -46,7 +70,7 @@ export class OllamaAdapter implements LLMAdapter {
     // Build request body
     const body: any = {
       model: model.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: toOllamaMessages(messages),
       stream: false,
       options: {
         num_predict: options.maxTokens ?? 4096,
@@ -54,9 +78,10 @@ export class OllamaAdapter implements LLMAdapter {
       },
     };
 
-    // Add tools if provided (Ollama/OpenAI-compatible format)
-    if (options.tools && options.tools.length > 0) {
-      body.tools = options.tools;
+    // Add tools if provided (Ollama accepts the OpenAI function-tool wrapper)
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      body.tools = wireTools;
     }
 
     const response = await fetch(`${this.baseUrl}/api/chat`, {
@@ -106,7 +131,7 @@ export class OllamaAdapter implements LLMAdapter {
   async *stream(model: ModelRef, messages: LLMMessage[], options: LLMOptions): AsyncGenerator<string> {
     const body: any = {
       model: model.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: toOllamaMessages(messages),
       stream: true,
       options: {
         num_predict: options.maxTokens ?? 4096,
@@ -114,8 +139,9 @@ export class OllamaAdapter implements LLMAdapter {
       },
     };
 
-    if (options.tools && options.tools.length > 0) {
-      body.tools = options.tools;
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      body.tools = wireTools;
     }
 
     const response = await fetch(`${this.baseUrl}/api/chat`, {

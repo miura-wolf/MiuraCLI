@@ -1,0 +1,59 @@
+strict_tdd: true
+context: |
+  miuraswarm-mcp is a Node.js/TypeScript ESM project.
+  Detected markers: package.json, tsconfig.json, bun package manager, mcp/package.json, mcp/tsconfig.json, mcp/npm package manager.
+  Package managers: bun, npm.
+  Additional evidence: Test-like files detected (22); examples: src\cli\command-registry.test.ts, src\cli\session-manager.test.ts, src\core\event-bus.test.ts, src\core\model-router.test.ts, src\core\plugin-host.test.ts.
+  Primary test command: bun run test.
+  Unit tests: Vitest (bun run test).
+  Integration tests: none.
+  E2E tests: none.
+rules:
+  proposal:
+    require_problem_statement: true
+  spec:
+    require_acceptance_criteria: true
+  design:
+    require_tradeoffs: true
+  tasks:
+    protect_review_workload: true
+  apply:
+    test_command: "bun run test"
+  verify:
+    test_command: "bun run test"
+testing:
+  detected: "2026-05-29"
+  runner:
+    command: "bun run test"
+    framework: "Vitest"
+  layers:
+    unit: "Vitest"
+    integration: ""
+    e2e: ""
+  commands:
+    unit:
+      - scope: "."
+        command: "bun run test"
+        framework: "Vitest"
+    integration:
+      []
+    e2e:
+      []
+  coverage:
+    command: ""
+    commands:
+      []
+quality:
+  lint: "bun run lint"
+  lint_commands:
+    - scope: "."
+      command: "bun run lint"
+      framework: "linter"
+  typecheck: "bun run typecheck"
+  typecheck_commands:
+    - scope: "."
+      command: "bun run typecheck"
+      framework: "type checker"
+  format: ""
+  format_commands:
+    []

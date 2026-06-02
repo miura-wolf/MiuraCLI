@@ -6,3 +6,12 @@ dist/
 *.db-shm
 coverage/
 .env
+.env.ex
+# Local Pi runtime state
+.atl/
+.pi/
+.pi-lens/
+# Bun compile intermediate artifacts
+*.bun-build
+# Windows reserved-name stray file
+nul

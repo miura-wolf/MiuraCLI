@@ -1,0 +1,1598 @@
+
+========== PAGE 281 ==========
+Desarrollo Guiado por IA con Claude
+Code
+Desarrolla en Producción como Tony Stark con su J.A.R.V.I.S.
+Este capítulo te enseña a usar Claude Code con subagentes especializados para desarrollo profesional. El
+concepto central:
+Vos sos Tony Stark: El arquitecto, tomás las decisiones
+Claude Code es Jarvis: Tu asistente que orquesta todo
+Los Subagentes son tu equipo: Especialistas en diferentes áreas
+Filosofía del Desarrollo Asistido por IA
+NO es: "La IA programa por mí"
+SÍ es: "Yo programo CON la IA"
+El control siempre lo tenés vos. La IA sugiere, vos decidís.
+Instalación y Configuración
+Prerrequisitos
+Node.js 18+
+Git
+Una API key de Anthropic
+Paso 1: Configurar API Key
+# Variable de entorno
+export ANTHROPIC_API_KEY="tu-api-key-aquí"
+# O agregar permanentemente
+echo 'export ANTHROPIC_API_KEY="tu-api-key-aquí"' >> ~/.zshrc
+Paso 2: Iniciar Claude Code
+
+========== PAGE 282 ==========
+# Navegar a tu proyecto
+cd /path/to/your/project
+# Iniciar Claude Code
+claude
+Paso 3: Iniciar Proyecto con el Arquitecto
+> Use scope-rule-architect to create TaskFlow app structure with:
+- React 19, TypeScript, Vitest, ESLint, Prettier, Tailwind CSS
+- Features: task-management, project-filtering, export-functionality
+- Shared: components (Button, Modal, Badge), hooks (useLocalStorage), utils (formatters)
+- No backend required, localStorage only
+Esto creará automáticamente:
+La estructura de carpetas siguiendo Scope Rule
+El archivo CLAUDE.md con el workflow
+Instalación de todas las dependencias
+Configuración de ESLint y Prettier
+Arquitectura Scope Rule
+Principios Fundamentales
+1. Scope Rule - La Regla Inquebrantable
+"El alcance determina la estructura"
+Código usado por 2+ features → Va en directorios globales/shared
+Código usado por 1 feature → Se queda local en ese feature
+Sin excepciones - Esta regla es estricta
+2. Screaming Architecture - La Estructura que GRITA
+Tu estructura debe comunicar INMEDIATAMENTE qué hace la aplicación.
+✅ BIEN - Grita funcionalidad:
+src/
+  features/
+
+========== PAGE 283 ==========
+    shopping-cart/        # ¡Es un carrito!
+    user-authentication/  # ¡Autenticación!
+    task-management/      # ¡Gestión de tareas!
+❌ MAL - Agrupación técnica:
+src/
+  components/
+    ...todos los componentes de la app # ¿Qué hace la app?
+  containers/  # No dice nada
+    ...todos los contenedores de la app # ¿Qué hace la app?
+  hooks/       # Puramente técnico
+    ...todos los hooks de la app # ¿Qué hace la app?
+3. Container/Presentational Pattern
+Containers: Lógica de negocio, estado, data fetching
+Presentational: Solo UI con props, componentes puros
+El container principal tiene el MISMO NOMBRE que el feature
+Framework de Decisión
+Identificar alcance: ¿Cuántos features lo usan?
+Aplicar regla: 1 feature = local, 2+ = global
+Validar: ¿La estructura grita qué hace la app?
+Estructura Ejemplo
+src/
+  features/
+    task-management/
+      task-management.tsx     # Container principal
+      components/
+        TaskList.tsx          # Container secundario
+        TaskItem.tsx          # Presentational
+      services/
+        TaskService.ts
+      hooks/
+        useTasks.ts
+      models.ts
+  shared/                     # GLOBAL = 2+ features
+    components/
+      Button.tsx
+      Modal.tsx
+    hooks/
+      useLocalStorage.ts
+    utils/
+
+========== PAGE 284 ==========
+      formatters.ts
+  infrastructure/             # Cross-cutting
+    api/
+    auth/
+    monitoring/
+Archivo CLAUDE.md
+# CLAUDE.md
+## Architecture: Scope Rule
+- **Global**: Used by 2+ features
+- **Local**: Used by 1 feature only
+- Los servicios, que estén en el root,
+  deben de ser singleton.
+## Tech Stack
+- React 19 + TypeScript
+- Zustand for state
+- React Query for server state
+- Tailwind CSS
+- Vitest + React Testing Library
+- ESLint + Prettier (auto-applied)
+## TDD Development Workflow
+### Phase 1: Architecture & Planning
+1. scope-rule-architect: Design structure - USE for new features
+2. react-mentor: Architectural guidance - USE for complex decisions
+3. git-workflow-manager: Commit - USE after each phase
+### Phase 2: Test-Driven Development
+4. tdd-test-first: Create tests - USE for each functionality
+5. git-workflow-manager: Commit RED phase
+6. react-test-implementer: Implement - USE after tests fail
+7. git-workflow-manager: Commit GREEN phase
+### Phase 3: Quality & Security
+8. security-auditor: Audit - USE before main merge
+9. git-workflow-manager: Commit fixes
+10. accessibility-auditor: WCAG - USE after UI complete
+11. git-workflow-manager: Commit improvements
+## Git Strategy (NO Claude mentions)
+- Architecture: "feat: add [feature] architecture"
+- Tests: "test: add [feature] tests (RED)"
+- Implementation: "feat: implement [feature] (GREEN)"
+- Security: "fix: security improvements"
+- A11Y: "feat: improve accessibility"
+
+========== PAGE 285 ==========
+## RULES
+- NEVER write code without concrete functionality
+- NEVER implement without failing tests
+- NEVER mention Claude in commits
+- ALWAYS apply ESLint + Prettier
+Sistema de Subagentes
+Crear Subagentes con /agents
+> /agents
+Menú interactivo para:
+Ver subagentes disponibles
+Crear nuevos (automáticamente con descripciones)
+Editar existentes
+Eliminar custom agents
+Modelos Recomendados
+scope-rule-architect: claude-opus-4.1 (decisiones críticas)
+react-mentor: claude-opus-4.1 (conocimiento profundo)
+security-auditor: claude-opus-4.1 (análisis exhaustivo)
+accessibility-auditor: claude-opus-4.1 (especialización WCAG)
+tdd-test-first: claude-4-sonnet (generación de tests)
+react-test-implementer: claude-4-sonnet (implementación)
+git-workflow-manager: claude-3-5-haiku (commits simples)
+Los 7 Agentes Principales
+1. scope-rule-architect
+Architecture specialist for Scope Rule. Decides component placement (global if 2+ features, lo
+Creates project structure, installs React 19, TypeScript, Vitest, ESLint, Prettier.
+Container components must have same name as feature. Structure must scream functionality.
+USE WHEN: Starting new features or projects.
+2. react-mentor
+
+========== PAGE 286 ==========
+React patterns expert. Provides guidance on architectural decisions, performance optimizations
+and best practices. Knows React 19, TypeScript, hooks patterns, state management.
+USE WHEN: Complex architectural decisions needed.
+3. tdd-test-first
+TDD specialist that ALWAYS writes tests FIRST. Creates comprehensive test suites with Vitest
+and React Testing Library. Tests must fail initially (RED phase). Covers happy paths,
+edge cases, error states. Tests based on concrete user stories and acceptance criteria.
+USE WHEN: Starting any new functionality (always before coding).
+4. react-test-implementer
+Implementation specialist. Writes minimal code to pass ALL tests. Follows Container/Presentati
+pattern. Applies ESLint + Prettier automatically. Uses React 19, TypeScript, Zustand, React Qu
+USE WHEN: After tests are failing (RED phase complete).
+5. security-auditor
+Security expert checking OWASP Top 10, XSS, CSRF, authentication issues. Reviews JWT implement
+input validation, API security. Runs npm audit. Checks for exposed secrets.
+USE WHEN: Before merging to main branch.
+6. accessibility-auditor
+WCAG 2.1 AA compliance expert. Checks keyboard navigation, ARIA labels, screen reader support,
+color contrast. Global components must be perfect. Feature components follow semantic HTML.
+USE WHEN: After UI features are complete.
+7. git-workflow-manager
+Git specialist for conventional commits. NEVER mentions Claude Code or AI collaboration.
+Uses format: feat|fix|test|docs|refactor|chore(scope): description.
+Creates professional PR descriptions. Manages semantic versioning.
+USE WHEN: After each development phase for commits.
+Proyecto Práctico - TaskFlow
+Archivo de Especificaciones del Proyecto
+IMPORTANTE: Antes de empezar el desarrollo, creá un archivo PROJECT_SPECS.md con todas las
+especificaciones del proyecto. Este archivo es fundamental para que Claude Code y los subagentes tengan
+el contexto completo.
+Contenido del PROJECT_SPECS.md
+
+========== PAGE 287 ==========
+# TaskFlow - Project Specifications
+## Project Description
+TaskFlow is a personal task manager that allows organizing work with projects, priorities, and
+## User Stories
+### Epic 1: Basic Task Management
+#### US-001: View task list
+As a user, I want to see a list of tasks to know my pending work
+**Acceptance Criteria:**
+- Show empty list with "No hay tareas" message initially
+- Each task displays: title, priority (color badge), status
+- Tasks sorted by creation date (newest first)
+  **Technical Notes:** Use mocked data initially
+#### US-002: Create new task
+As a user, I want to create a new task to add pending work
+**Acceptance Criteria:**
+- Form with fields: title (required, 3-100 chars), description (optional), priority (select: l
+- "Create" button disabled if title invalid
+- Task appears immediately in list after creation
+- Clear form after successful creation
+  **Validations:** Title between 3-100 characters
+[... rest of user stories ...]
+## Data Structure
+Interface Task {
+id: string; // UUID
+title: string; // 3-100 chars
+description?: string;
+priority: 'low' | 'medium' | 'high';
+status: 'TODO' | 'IN_PROGRESS' | 'DONE';
+project: 'Personal' | 'Trabajo' | 'Estudio' | 'General';
+createdAt: Date;
+updatedAt: Date;
+}
+## Business Rules
+- Status transitions: TODO → IN_PROGRESS → DONE (and back)
+- Default project is "General"
+- Priority colors: low=green, medium=yellow, high=red
+- All data persisted to localStorage key: taskflow_tasks
+Usar el archivo en los comandos
+
+========== PAGE 288 ==========
+Cuando uses cualquier subagente, referenciá el archivo para dar contexto completo:
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-002
+O agregalo al CLAUDE.md para que siempre esté disponible:
+# CLAUDE.md
+## Project Context
+@PROJECT_SPECS.md contains all user stories and requirements
+[resto del contenido...]
+Descripción
+TaskFlow es un gestor de tareas personal que permite organizar trabajo con proyectos, prioridades y
+estados. Sin backend, todo en localStorage.
+User Stories Completas
+Epic 1: Gestión Básica de Tareas
+US-001: Como usuario, quiero ver una lista de tareas para conocer mis pendientes
+Criterios de Aceptación:
+Mostrar lista vacía con mensaje "No hay tareas" al inicio
+Cada tarea muestra: título, prioridad (badge color), estado
+Ordenar por fecha creación (más reciente primero)
+Notas técnicas: Usar datos mockeados inicialmente
+US-002: Como usuario, quiero crear una nueva tarea para agregar trabajo pendiente
+Criterios de Aceptación:
+Formulario: título (requerido, 3-100 chars), descripción (opcional), prioridad (select)
+Botón "Crear" deshabilitado si título inválido
+Tarea aparece inmediatamente en lista
+Limpiar formulario después de crear
+Validaciones: Título entre 3-100 caracteres
+
+========== PAGE 289 ==========
+US-003: Como usuario, quiero editar una tarea existente para corregir información
+Criterios de Aceptación:
+Botón "Editar" abre formulario con datos actuales
+Mismas validaciones que crear
+Botón "Guardar" actualiza tarea
+Botón "Cancelar" cierra sin guardar
+Notas: Inline editing en la lista
+US-004: Como usuario, quiero eliminar una tarea para remover trabajo completado
+Criterios de Aceptación:
+Botón "Eliminar" en cada tarea
+Confirmación: "¿Estás seguro?"
+Tarea se remueve inmediatamente
+UX: Modal de confirmación
+Epic 2: Estados y Workflow
+US-005: Como usuario, quiero cambiar el estado de una tarea para tracking de progreso
+Criterios de Aceptación:
+Estados: TODO → IN_PROGRESS → DONE
+Botón/Select para cambiar estado
+Visual diferenciado por estado
+Contador de tareas por estado
+Reglas: Solo siguiente o anterior estado
+US-006: Como usuario, quiero filtrar tareas por estado para focus específico
+Criterios de Aceptación:
+Tabs: "Todas", "Por hacer", "En progreso", "Completadas"
+Filtro inmediato
+Mantener filtro al crear/editar
+Mostrar count en cada tab
+
+========== PAGE 290 ==========
+Default: "Todas" al cargar
+Epic 3: Proyectos
+US-007: Como usuario, quiero organizar tareas en proyectos para mejor organización
+Criterios de Aceptación:
+Campo proyecto al crear/editar
+Proyectos: "Personal", "Trabajo", "Estudio", "General"
+Color distintivo por proyecto
+Visual: Badge con color
+US-008: Como usuario, quiero filtrar tareas por proyecto
+Criterios de Aceptación:
+Dropdown con proyectos
+Opción "Todos los proyectos"
+Combinar con filtro estado
+UX: Filtros acumulativos
+Epic 4: Persistencia
+US-009: Como usuario, quiero que mis tareas se guarden automáticamente
+Criterios de Aceptación:
+Guardar en localStorage después de cada operación
+Cargar tareas al iniciar
+Mensaje "Guardado" (2 segundos)
+Key: taskflow_tasks
+US-010: Como usuario, quiero exportar mis tareas para backup
+Criterios de Aceptación:
+Botón "Exportar" descarga JSON
+Nombre: taskflow_backup_YYYY-MM-DD.json
+
+========== PAGE 291 ==========
+Incluir metadata
+Formato: JSON indentado
+Estructura de Datos
+interface Task {
+ id: string; // UUID
+ title: string; // 3-100 chars
+ description?: string;
+ priority: 'low' | 'medium' | 'high';
+ status: 'TODO' | 'IN_PROGRESS' | 'DONE';
+ project: 'Personal' | 'Trabajo' | 'Estudio' | 'General';
+ createdAt: Date;
+ updatedAt: Date;
+}
+Plan de Iteraciones - Workflow Completo
+Iteración 1: Setup (US-001 parcial)
+> Use scope-rule-architect to create initial structure
+> Use git-workflow-manager to commit
+COMMIT: feat: initial project setup with routing
+Iteración 2: Lista de Tareas (US-001)
+# RED Phase - Tests
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-001
+> Use git-workflow-manager to commit
+COMMIT: test: add TaskList tests (RED)
+# GREEN Phase - Implementation
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+COMMIT: feat: implement TaskList (GREEN)
+# Security Check
+> Use security-auditor to check TaskList
+IF issues found:
+  > Use tdd-test-first to update tests with security requirements
+  > Use react-test-implementer to fix security issues
+  > Use git-workflow-manager to commit
+  COMMIT: fix: security improvements for TaskList
+# Accessibility Check
+> Use accessibility-auditor to check TaskList
+IF issues found:
+  > Use tdd-test-first to update tests with a11y requirements
+  > Use react-test-implementer to fix a11y issues
+  > Use git-workflow-manager to commit
+  COMMIT: feat: improve TaskList accessibility
+
+========== PAGE 292 ==========
+Iteración 3: Crear Tarea (US-002)
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-002
+> Use git-workflow-manager to commit
+COMMIT: test: add CreateTask tests (RED)
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+COMMIT: feat: implement CreateTask form (GREEN)
+# Security Check
+> Use security-auditor to check CreateTask
+IF issues found:
+  > Use tdd-test-first to update tests
+  > Use react-test-implementer to fix issues
+  > Use git-workflow-manager to commit
+  COMMIT: fix: security improvements for CreateTask
+# Accessibility Check
+> Use accessibility-auditor to check CreateTask
+IF issues found:
+  > Use tdd-test-first to update tests
+  > Use react-test-implementer to fix issues
+  > Use git-workflow-manager to commit
+  COMMIT: feat: improve CreateTask accessibility
+Iteración 4: Editar Tarea (US-003)
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-003
+> Use git-workflow-manager to commit
+COMMIT: test: add EditTask tests (RED)
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+COMMIT: feat: implement task editing (GREEN)
+# Security & A11Y Checks (mismo proceso)
+Iteración 5: Eliminar Tarea (US-004)
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-004
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-004
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-004
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-004
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add DeleteTask tests (RED)
+COMMIT: test: add DeleteTask tests (RED)
+COMMIT: test: add DeleteTask tests (RED)
+COMMIT: test: add DeleteTask tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement task deletion (GREEN)
+COMMIT: feat: implement task deletion (GREEN)
+COMMIT: feat: implement task deletion (GREEN)
+COMMIT: feat: implement task deletion (GREEN)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+
+========== PAGE 293 ==========
+Iteración 6: Estados (US-005)
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-005
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-005
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-005
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-005
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add status workflow tests (RED)
+COMMIT: test: add status workflow tests (RED)
+COMMIT: test: add status workflow tests (RED)
+COMMIT: test: add status workflow tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement status workflow (GREEN)
+COMMIT: feat: implement status workflow (GREEN)
+COMMIT: feat: implement status workflow (GREEN)
+COMMIT: feat: implement status workflow (GREEN)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+Iteración 7: Filtro Estado (US-006)
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-006
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-006
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-006
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-006
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add status filter tests (RED)
+COMMIT: test: add status filter tests (RED)
+COMMIT: test: add status filter tests (RED)
+COMMIT: test: add status filter tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement status filtering (GREEN)
+COMMIT: feat: implement status filtering (GREEN)
+COMMIT: feat: implement status filtering (GREEN)
+COMMIT: feat: implement status filtering (GREEN)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+Iteración 8: Proyectos (US-007, US-008)
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-007 and US-008
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-007 and US-008
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-007 and US-008
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-007 and US-008
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add project tests (RED)
+COMMIT: test: add project tests (RED)
+COMMIT: test: add project tests (RED)
+COMMIT: test: add project tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement projects (GREEN)
+COMMIT: feat: implement projects (GREEN)
+COMMIT: feat: implement projects (GREEN)
+COMMIT: feat: implement projects (GREEN)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+Iteración 9: Persistencia (US-009)
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-009
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-009
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-009
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-009
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add persistence tests (RED)
+COMMIT: test: add persistence tests (RED)
+COMMIT: test: add persistence tests (RED)
+COMMIT: test: add persistence tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement auto-save (GREEN)
+COMMIT: feat: implement auto-save (GREEN)
+COMMIT: feat: implement auto-save (GREEN)
+COMMIT: feat: implement auto-save (GREEN)
+# Security Check (localStorage XSS prevention)
+# Security Check (localStorage XSS prevention)
+# Security Check (localStorage XSS prevention)
+# Security Check (localStorage XSS prevention)
+> Use security-auditor to check persistence
+> Use security-auditor to check persistence
+> Use security-auditor to check persistence
+> Use security-auditor to check persistence
+IF issues found:
+IF issues found:
+IF issues found:
+IF issues found:
+  > Use tdd-test-first to update tests
+  > Use tdd-test-first to update tests
+  > Use tdd-test-first to update tests
+  > Use tdd-test-first to update tests
+  > Use react-test-implementer to fix issues
+  > Use react-test-implementer to fix issues
+  > Use react-test-implementer to fix issues
+  > Use react-test-implementer to fix issues
+  > Use git-workflow-manager to commit
+  > Use git-workflow-manager to commit
+  > Use git-workflow-manager to commit
+  > Use git-workflow-manager to commit
+  COMMIT: fix: secure localStorage implementation
+  COMMIT: fix: secure localStorage implementation
+  COMMIT: fix: secure localStorage implementation
+  COMMIT: fix: secure localStorage implementation
+Iteración 10: Export (US-010)
+
+========== PAGE 294 ==========
+# RED Phase
+# RED Phase
+# RED Phase
+# RED Phase
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-010
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-010
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-010
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-010
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: test: add export tests (RED)
+COMMIT: test: add export tests (RED)
+COMMIT: test: add export tests (RED)
+COMMIT: test: add export tests (RED)
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+# GREEN Phase
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use react-test-implementer to make tests pass
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+> Use git-workflow-manager to commit
+COMMIT: feat: implement JSON export (GREEN)
+COMMIT: feat: implement JSON export (GREEN)
+COMMIT: feat: implement JSON export (GREEN)
+COMMIT: feat: implement JSON export (GREEN)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+# Security & A11Y Checks (mismo proceso)
+Iteración 11: Final Security & A11Y Audit
+# Full Application Audit
+> Use security-auditor to audit entire application
+> Use accessibility-auditor for full WCAG compliance check
+IF any issues found:
+  > Use tdd-test-first to create/update tests for the issues
+  > Use react-test-implementer to fix all issues
+  > Use git-workflow-manager to commit
+  COMMIT: fix: final security and accessibility improvements
+Regla Importante del Workflow
+NUNCA modificar código directamente sin actualizar tests primero
+Si security o a11y encuentran problemas:
+Primero actualizar/crear tests que capturen el problema
+Luego modificar el código para que pasen los tests
+Commit después de cada cambio
+Esto garantiza que:
+Los tests siempre reflejan los requerimientos actuales
+No se introducen regresiones
+Security y a11y quedan testeados para el futuro
+Workflow Tony Stark
+El Loop Completo
+Tony (define) → Jarvis (orchestrate) → Agents (execute) → Review → Iterate
+
+========== PAGE 295 ==========
+Ejemplo Completo: Implementar US-002 (Crear Tarea)
+ACTO 1: Tony Planifica
+> I need to implement US-002 from the project specs
+ACTO 2: TDD - Tests Primero
+> @PROJECT_SPECS.md Use tdd-test-first to create tests for US-002
+El subagente leerá los criterios de aceptación directamente del archivo y creará los tests apropiados.
+ACTO 3: Commit Tests (RED)
+> Use git-workflow-manager to commit tests
+> Use git-workflow-manager to commit tests
+> Use git-workflow-manager to commit tests
+> Use git-workflow-manager to commit tests
+Resultado: test: add CreateTask form tests (RED)
+ACTO 4: Implementación
+> Use react-test-implementer to implement CreateTask to pass all tests
+> Use react-test-implementer to implement CreateTask to pass all tests
+> Use react-test-implementer to implement CreateTask to pass all tests
+> Use react-test-implementer to implement CreateTask to pass all tests
+El subagente ya sabe qué implementar porque tiene los tests fallando.
+ACTO 5: Commit Implementación (GREEN)
+> Use git-workflow-manager to commit implementation
+> Use git-workflow-manager to commit implementation
+> Use git-workflow-manager to commit implementation
+> Use git-workflow-manager to commit implementation
+Resultado: feat: implement CreateTask form (GREEN)
+ACTO 6: Security & Accessibility
+> Use security-auditor to check CreateTask
+> Use security-auditor to check CreateTask
+> Use security-auditor to check CreateTask
+> Use security-auditor to check CreateTask
+> Use accessibility-auditor to verify WCAG compliance
+> Use accessibility-auditor to verify WCAG compliance
+> Use accessibility-auditor to verify WCAG compliance
+> Use accessibility-auditor to verify WCAG compliance
+La clave es que con @PROJECT_SPECS.md cada subagente tiene todo el contexto necesario sin necesidad
+de repetir los requerimientos en cada comando.
+Scripts y Automatización
+Package.json
+
+========== PAGE 296 ==========
+{
+ "scripts": {
+  "dev": "vite",
+  "build": "tsc && vite build",
+  "test": "vitest",
+  "test:watch": "vitest --watch",
+  "lint": "eslint . --ext ts,tsx",
+  "format": "prettier --write .",
+  // Claude workflows
+  "ai:architect": "echo 'Use scope-rule-architect' | claude",
+  "ai:test": "echo 'Use tdd-test-first' | claude",
+  "ai:implement": "echo 'Use react-test-implementer' | claude",
+  "ai:security": "echo 'Use security-auditor' | claude",
+  "ai:a11y": "echo 'Use accessibility-auditor' | claude",
+  // Full workflow
+  "ai:feature": "npm run ai:test && npm run ai:implement"
+ }
+}
+Comandos Slash Personalizados
+# Crear comando para optimización
+echo "Analyze performance and suggest optimizations" > .claude/commands/optimize.md
+# Usar en Claude Code
+> /optimize
+Comandos de Referencia
+Claude Code Básicos
+# Iniciar
+claude
+# Continuar conversación
+claude --continue
+# Selector de conversaciones
+claude --resume
+# Output formats
+claude --output-format json
+Dentro de Claude Code
+# Gestionar agentes
+> /agents
+# Referenciar archivos
+
+========== PAGE 297 ==========
+> @src/components/TaskList.tsx
+# Thinking profundo
+> Think deeply about [topic]
+# Usar agente específico
+> Use the [agent-name] subagent to [task]
+Tips y Best Practices
+Para User Stories
+✅ Definir criterios de aceptación claros ✅ Incluir validaciones específicas ✅ Una funcionalidad
+concreta por iteración
+Para TDD
+✅ Tests primero, código después ✅ Commit en cada fase (RED, GREEN) ✅ Tests basados en
+criterios de aceptación
+Para Commits
+✅ Conventional commits siempre ✅ NUNCA mencionar Claude o IA ✅ Un commit por fase del
+workflow
+Para Arquitectura
+✅ Scope Rule estricta: 2+ = global, 1 = local ✅ Nombres que griten funcionalidad ✅ Container =
+mismo nombre que feature
+Conclusión
+Con este sistema tenés:
+Control Total: Vos decidís, la IA ejecuta
+7 Agentes Especializados: Cada uno experto en su área
+Workflow TDD Real: Tests → Implementation → Security → A11Y
+Arquitectura Clara: Scope Rule simple y efectiva
+User Stories Concretas: Como en Jira, con criterios claros
+El resultado es código profesional, testeado, seguro y accesible desde el día uno.
+
+========== PAGE 298 ==========
+"Sometimes you gotta run before you can walk" - Tony Stark
+Pero con este sistema, vas a correr con tests, seguridad y accesibilidad garantizados.
+© 2025 - Gentleman Programming
+Clean Architecture + IA = Desarrollo Profesional
+
+========== PAGE 299 ==========
+El Manual Definitivo del Frontend
+Developer
+Por Gentleman Programming
+"No se trata de memorizar código, se trata de entender los conceptos. El código cambia, los
+conceptos permanecen."
+Buenas, acá estamos de nuevo. Este libro es el resultado de años de experiencia rompiendo cosas,
+arreglándolas, y explicándolas en YouTube, Twitch, y donde sea que me dejen hablar de código. La idea es
+simple: darte todo lo que necesitás saber para ser un frontend developer que realmente entienda lo que
+está haciendo, no uno que copia y pega de Stack Overflow sin entender por qué funciona.
+Vamos a ir desde lo más básico hasta lo más avanzado, pero siempre con el mismo enfoque: entender el
+por qué antes del cómo. Porque cuando entendés el problema que una herramienta resuelve, usarla se
+vuelve natural.
+Dale que va.
+Parte I - Fundamentos
+HTML Semántico y el DOM
+El problema que resolvemos
+Imaginate que estás construyendo una casa. El HTML es la estructura: las paredes, el techo, las
+habitaciones. Podés hacer una casa donde todo sea un rectángulo gris sin ventanas ni puertas marcadas,
+pero nadie va a entender cómo moverse adentro. Lo mismo pasa con el HTML: podés hacer todo con
+<div> y <span>, pero estás construyendo un laberinto incomprensible.
+El HTML semántico es darle significado a cada parte de tu estructura. No es solo para que se vea bien el
+código; es para que los navegadores, los lectores de pantalla, los buscadores, y vos mismo en 6 meses
+entiendan qué carajo hace cada parte.
+¿Por qué importa la semántica?
+La semántica tiene impacto directo en tres áreas críticas:
+
+========== PAGE 300 ==========
+1. Accesibilidad: Los lectores de pantalla (como VoiceOver en macOS o NVDA en Windows) usan las
+etiquetas semánticas para navegar. Un <nav> les dice "esto es navegación", un <main> les dice "acá está
+el contenido principal". Sin semántica, un usuario ciego escucha "div, div, div, div" y no entiende nada.
+2. SEO: Google usa la estructura semántica para entender tu contenido. Un <article> con un <h1> claro
+es mucho más valioso para el buscador que un <div class="titulo">.
+3. Mantenibilidad: Cuando volvés a tu código en 6 meses, <header>, <main>, <footer> te dicen
+exactamente qué es cada cosa. <div class="container-1"> no te dice nada.
+HTML Semántico: Las etiquetas que importan
+<!-- MAL: Todo es div, nadie entiende nada -->
+<div class="header">
+<div class="nav">
+<div class="link">Inicio</div>
+</div>
+</div>
+<div class="main">
+<div class="article">
+<div class="title">Mi artículo</div>
+</div>
+</div>
+<!-- BIEN: Cada elemento tiene su propósito -->
+<header>
+<nav>
+<a href="/">Inicio</a>
+</nav>
+</header>
+<main>
+<article>
+<h1>Mi artículo</h1>
+</article>
+</main>
+Las etiquetas semánticas principales
+Estructura del documento:
+<header>: La cabecera. Puede ser del documento completo o de una sección. Generalmente contiene
+navegación, logo, título principal.
+<nav>: Navegación. Menús, links importantes. No todo grupo de links es un <nav>, solo la navegación
+principal.
+<main>: El contenido principal. Solo debe haber uno por página. Es donde va la carne del asunto.
+<article>: Contenido independiente y autocontenido. Un post de blog, una noticia, un comentario.
+Debería tener sentido por sí solo.
+<section>: Una sección temática del contenido. Agrupa contenido relacionado.
+
+========== PAGE 301 ==========
+<aside>: Contenido relacionado pero tangencial. Sidebars, publicidad, links relacionados.
+<footer>: El pie. Del documento o de una sección. Copyright, links secundarios, información de
+contacto.
+Contenido:
+<h1> a <h6>: Jerarquía de títulos. Solo un <h1> por página, y no te saltees niveles.
+<p>: Párrafos.
+<ul>, <ol>, <li>: Listas. Desordenadas, ordenadas, y sus items.
+<figure> y <figcaption>: Para imágenes, diagramas, código con su descripción.
+<blockquote>: Citas largas.
+<code>, <pre>: Código inline y bloques de código.
+<time>: Fechas y horas. Tiene un atributo datetime para la versión machine-readable.
+<address>: Información de contacto.
+<mark>: Texto resaltado.
+<article>
+<header>
+<h1>Cómo funciona el Event Loop</h1>
+<time datetime="2024-01-15">15 de Enero, 2024</time>
+</header>
+<section>
+<h2>¿Qué es el Event Loop?</h2>
+<p>El Event Loop es el corazón de JavaScript...</p>
+<figure>
+<img src="event-loop.png" alt="Diagrama del Event Loop" />
+<figcaption>Flujo del Event Loop en JavaScript</figcaption>
+</figure>
+</section>
+<aside>
+<h3>Recursos relacionados</h3>
+<ul>
+<li><a href="/promises">Guía de Promises</a></li>
+<li><a href="/async-await">Async/Await explicado</a></li>
+</ul>
+</aside>
+<footer>
+<address>
+Escrito por <a href="mailto:contacto@gentleman.dev">Gentleman</a>
+</address>
+</footer>
+</article>
+
+========== PAGE 302 ==========
+El DOM (Document Object Model)
+El DOM es la representación en memoria de tu HTML. Cuando el navegador lee tu HTML, crea un árbol de
+objetos que JavaScript puede manipular. Cada etiqueta se convierte en un nodo.
+¿Por qué es importante entender el DOM?
+El DOM es la interfaz entre tu HTML estático y la interactividad de JavaScript. Sin entender el DOM:
+No podés manipular elementos dinámicamente
+No entendés por qué algunas operaciones son lentas
+No sabés cómo optimizar re-renders
+document
+document
+document
+document
+└── html
+└── html
+└── html
+└── html
+    ├── head
+    ├── head
+    ├── head
+    ├── head
+    │   ├── title
+    │   ├── title
+    │   ├── title
+    │   ├── title
+    │   └── meta
+    │   └── meta
+    │   └── meta
+    │   └── meta
+    └── body
+    └── body
+    └── body
+    └── body
+        ├── header
+        ├── header
+        ├── header
+        ├── header
+        │   └── nav
+        │   └── nav
+        │   └── nav
+        │   └── nav
+        └── main
+        └── main
+        └── main
+        └── main
+            └── article
+            └── article
+            └── article
+            └── article
+Accediendo al DOM
+// Por ID (devuelve un elemento o null)
+const header = document.getElementById('main-header');
+// Por selector CSS (devuelve el primer match o null)
+const nav = document.querySelector('nav.main-nav');
+// Por selector CSS (devuelve NodeList con todos los matches)
+const links = document.querySelectorAll('nav a');
+// Por clase (devuelve HTMLCollection - live)
+const buttons = document.getElementsByClassName('btn');
+// Por etiqueta (devuelve HTMLCollection - live)
+const paragraphs = document.getElementsByTagName('p');
+Diferencia importante: querySelectorAll devuelve una NodeList estática (una foto del momento).
+getElementsByClassName y getElementsByTagName devuelven HTMLCollection que es live (se
+actualiza automáticamente si el DOM cambia).
+Manipulando el DOM
+// Crear elementos
+const newDiv = document.createElement('div');
+newDiv.textContent = 'Hola mundo';
+
+========== PAGE 303 ==========
+newDiv.classList.add('mi-clase');
+newDiv.setAttribute('data-id', '123');
+// Agregar al DOM
+document.body.appendChild(newDiv);
+// Insertar en posición específica
+const referencia = document.querySelector('.referencia');
+referencia.parentNode.insertBefore(newDiv, referencia);
+// Métodos modernos más legibles
+referencia.before(newDiv); // Antes del elemento
+referencia.after(newDiv); // Después del elemento
+referencia.prepend(newDiv); // Primer hijo
+referencia.append(newDiv); // Último hijo
+referencia.replaceWith(newDiv); // Reemplazar
+// Eliminar
+newDiv.remove();
+El problema del performance
+Cada vez que modificás el DOM, el navegador tiene que recalcular estilos, layouts, y posiblemente repintar.
+Esto es caro. Por eso:
+// MAL: Múltiples modificaciones = múltiples recálculos
+for (let i = 0; i < 1000; i++) {
+document.body.innerHTML += `<div>${i}</div>`;
+}
+// BIEN: Usar DocumentFragment
+const fragment = document.createDocumentFragment();
+for (let i = 0; i < 1000; i++) {
+const div = document.createElement('div');
+div.textContent = i;
+fragment.appendChild(div);
+}
+document.body.appendChild(fragment); // Un solo recálculo
+Atributos importantes
+Accesibilidad:
+alt: Texto alternativo para imágenes. Obligatorio.
+aria-*: Atributos de accesibilidad avanzada.
+role: Define el rol de un elemento cuando el semántico no alcanza.
+tabindex: Control del orden de tabulación.
+SEO y metadatos:
+
+========== PAGE 304 ==========
+lang: Idioma del contenido.
+title: Información adicional (tooltip).
+data-*: Atributos personalizados para JavaScript.
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Descripción para buscadores" />
+<title>Título de la página</title>
+</head>
+</html>
+Conclusión del capítulo
+El HTML semántico no es opcional, es la base de todo. Una estructura bien pensada hace que el CSS sea
+más simple, el JavaScript más limpio, la accesibilidad mejor, y el SEO más efectivo. Antes de escribir una
+sola línea de CSS, asegurate de que tu HTML tenga sentido.
+CSS Fundamentals
+El problema que resolvemos
+Tenés la estructura de tu casa (HTML), ahora necesitás pintarla, decorarla, y decidir dónde va cada
+mueble. CSS es eso: la presentación visual. Pero CSS tiene fama de ser impredecible, y es porque la
+mayoría no entiende cómo funciona realmente.
+La Cascada: El corazón de CSS
+CSS significa "Cascading Style Sheets". Lo de "cascading" no es decorativo; es el mecanismo central que
+determina qué estilos se aplican cuando hay conflictos.
+¿Qué problema resuelve la cascada?
+Cuando tenés múltiples reglas que aplican al mismo elemento, ¿cuál gana? La cascada responde esa
+pregunta con un sistema de prioridades claro:
+Origen e importancia
+Especificidad
+Orden de aparición
+Origen e Importancia
+
+========== PAGE 305 ==========
+/* Orden de menor a mayor prioridad */
+/* 1. Estilos del navegador (user agent) */
+/* 2. Estilos del usuario (configuraciones de accesibilidad) */
+/* 3. Estilos del autor (tu CSS) */
+/* 4. Estilos del autor con !important */
+/* 5. Estilos del usuario con !important */
+/* 6. Animaciones CSS */
+/* 7. Transiciones CSS */
+El !important rompe el flujo natural. Usalo solo cuando realmente no hay otra opción (spoiler: casi nunca
+la hay).
+/* MAL: Guerra de !important */
+.button {
+color: red !important;
+}
+.button.primary {
+color: blue !important; /* Esto gana, pero es un desastre */
+}
+/* BIEN: Usar especificidad correctamente */
+.button {
+color: red;
+}
+.button.primary {
+color: blue; /* Gana por mayor especificidad */
+}
+Especificidad: El sistema de puntos
+La especificidad es un sistema de puntos que determina qué selector gana. Pensalo como un número de 4
+dígitos:
+Selector
+Puntos
+Inline styles (style="")
+1000
+IDs (#id)
+100
+Clases, atributos, pseudo-clases (.clase, [attr], :hover)
+10
+Elementos, pseudo-elementos (div, ::before)
+1
+Universal (*), combinadores ( , >, +, ~)
+0
+/* Especificidad: 0-0-1 (1 elemento) */
+p {
+color: black;
+}
+/* Especificidad: 0-1-0 (1 clase) */
+.texto {
+
+========== PAGE 306 ==========
+color: blue;
+}
+/* Especificidad: 0-1-1 (1 clase + 1 elemento) */
+p.texto {
+color: green;
+}
+/* Especificidad: 1-0-0 (1 ID) */
+#parrafo {
+color: red;
+}
+/* Especificidad: 1-1-1 (1 ID + 1 clase + 1 elemento) */
+p#parrafo.texto {
+color: purple;
+}
+El Box Model
+Todo en CSS es una caja. Entender el box model es entender CSS.
+┌─────────────────────────────────────┐
+┌─────────────────────────────────────┐
+┌─────────────────────────────────────┐
+┌─────────────────────────────────────┐
+│            margin                   │
+│            margin                   │
+│            margin                   │
+│            margin                   │
+│  ┌───────────────────────────────┐  │
+│  ┌───────────────────────────────┐  │
+│  ┌───────────────────────────────┐  │
+│  ┌───────────────────────────────┐  │
+│  │         border                │  │
+│  │         border                │  │
+│  │         border                │  │
+│  │         border                │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  │       padding           │  │  │
+│  │  │       padding           │  │  │
+│  │  │       padding           │  │  │
+│  │  │       padding           │  │  │
+│  │  │  ┌───────────────────┐  │  │  │
+│  │  │  ┌───────────────────┐  │  │  │
+│  │  │  ┌───────────────────┐  │  │  │
+│  │  │  ┌───────────────────┐  │  │  │
+│  │  │  │    content        │  │  │  │
+│  │  │  │    content        │  │  │  │
+│  │  │  │    content        │  │  │  │
+│  │  │  │    content        │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  │                   │  │  │  │
+│  │  │  └───────────────────┘  │  │  │
+│  │  │  └───────────────────┘  │  │  │
+│  │  │  └───────────────────┘  │  │  │
+│  │  │  └───────────────────┘  │  │  │
+│  │  └─────────────────────────┘  │  │
+│  │  └─────────────────────────┘  │  │
+│  │  └─────────────────────────┘  │  │
+│  │  └─────────────────────────┘  │  │
+│  └───────────────────────────────┘  │
+│  └───────────────────────────────┘  │
+│  └───────────────────────────────┘  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+└─────────────────────────────────────┘
+└─────────────────────────────────────┘
+└─────────────────────────────────────┘
+Box-sizing: El cambio que necesitás
+Por defecto, width y height solo aplican al content. El padding y border se suman. Esto es un desastre
+para layouts.
+/* Con box-sizing: content-box (default) */
+.caja {
+width: 100px;
+padding: 20px;
+border: 5px solid black;
+}
+/* Ancho total: 100 + 40 + 10 = 150px */
+/* Con box-sizing: border-box */
+.caja {
+box-sizing: border-box;
+width: 100px;
+padding: 20px;
+border: 5px solid black;
+
+========== PAGE 307 ==========
+}
+Recomendación universal:
+*,
+*::before,
+*::after {
+box-sizing: border-box;
+}
+Display y Flow
+El valor de display determina cómo se comporta un elemento en el flujo del documento.
+Block vs Inline: La diferencia fundamental
+/* BLOCK: Ocupa todo el ancho disponible, empieza en nueva línea */
+/* div, p, h1-h6, section, article, header, footer, nav, main */
+.block {
+display: block;
+/* width, height, margin, padding: todos funcionan */
+}
+/* INLINE: Solo ocupa el espacio de su contenido, no rompe línea */
+/* span, a, strong, em, code */
+.inline {
+display: inline;
+/* width, height: NO funcionan */
+/* margin-top, margin-bottom: NO funcionan */
+/* padding: funciona pero no afecta el layout vertical */
+}
+/* INLINE-BLOCK: Inline pero respeta width/height */
+.inline-block {
+display: inline-block;
+/* Todo funciona, pero no rompe línea */
+}
+Flexbox: Layout en una dimensión
+Flexbox resuelve el problema del layout en una dimensión (fila o columna). Es el martillo que necesitás para
+el 80% de los layouts.
+¿Qué problema resuelve Flexbox?
+Antes de Flexbox, centrar un elemento vertical y horizontalmente requería hacks. Distribuir espacio entre
+elementos era un infierno de floats y clearfixes. Flexbox resuelve esto de forma elegante.
+.container {
+display: flex;
+
+========== PAGE 308 ==========
+/* Dirección principal */
+flex-direction: row; /* default: horizontal */
+flex-direction: column; /* vertical */
+/* Alineación en el eje principal */
+justify-content: flex-start; /* default */
+justify-content: center;
+justify-content: space-between; /* espacio entre items */
+justify-content: space-evenly; /* espacio uniforme */
+/* Alineación en el eje cruzado */
+align-items: stretch; /* default: ocupa todo el alto */
+align-items: center;
+align-items: flex-start;
+/* Gap (espacio entre items) - moderno y limpio */
+gap: 1rem;
+}
+.item {
+/* Crecer para llenar espacio disponible */
+flex-grow: 1;
+/* No encogerse */
+flex-shrink: 0;
+/* Tamaño base */
+flex-basis: 200px;
+/* Shorthand */
+flex: 1; /* flex-grow: 1, flex-shrink: 1, flex-basis: 0% */
+}
+Patrones comunes con Flexbox
+/* Centrado perfecto */
+.centrado {
+display: flex;
+justify-content: center;
+align-items: center;
+}
+/* Navbar con logo a la izquierda y links a la derecha */
+.navbar {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+/* Footer pegado abajo */
+.page {
+display: flex;
+flex-direction: column;
+min-height: 100vh;
+}
+.page-content {
+
+========== PAGE 309 ==========
+flex: 1;
+CSS Grid: Layout en dos dimensiones
+Grid resuelve layouts en dos dimensiones (filas y columnas). Es más poderoso que Flexbox para layouts
+complejos.
+.grid-container {
+display: grid;
+/* Definir columnas */
+grid-template-columns: 200px 1fr 200px; /* fijo, flexible, fijo */
+grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
+grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* responsive! */
+/* Definir filas */
+grid-template-rows: auto 1fr auto; /* header, content, footer */
+/* Gap */
+gap: 1rem;
+}
+Grid Areas: Lo mejor de Grid
+.layout {
+display: grid;
+grid-template-columns: 200px 1fr 200px;
+grid-template-rows: auto 1fr auto;
+grid-template-areas:
+'header header header'
+'sidebar main aside'
+'footer footer footer';
+min-height: 100vh;
+}
+.header {
+grid-area: header;
+}
+.sidebar {
+grid-area: sidebar;
+}
+.main {
+grid-area: main;
+}
+.footer {
+grid-area: footer;
+}
+Cuándo usar Flexbox vs Grid
+Usá Flexbox cuando:
+
+========== PAGE 310 ==========
+Tenés una sola dimensión (fila o columna)
+El contenido define el tamaño
+Querés distribuir espacio entre items
+Usá Grid cuando:
+Tenés dos dimensiones (filas Y columnas)
+El layout define el tamaño
+Necesitás posicionamiento preciso
+En la práctica: Grid para el layout general de la página, Flexbox para componentes internos.
+JavaScript Fundamentals
+El problema que resolvemos
+HTML es la estructura, CSS es la presentación, JavaScript es el comportamiento. Es lo que hace que tu
+página reaccione, se comunique con servidores, y se comporte como una aplicación real.
+El modelo de ejecución de JavaScript
+Antes de escribir una línea de código, necesitás entender cómo JavaScript ejecuta tu código. JavaScript es
+single-threaded pero asíncrono. ¿Cómo es eso posible?
+El Event Loop es el mecanismo que lo permite:
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+│                         Call Stack                          │
+│                         Call Stack                          │
+│                         Call Stack                          │
+│                         Call Stack                          │
+│  (donde se ejecuta el código síncrono)                     │
+│  (donde se ejecuta el código síncrono)                     │
+│  (donde se ejecuta el código síncrono)                     │
+│  (donde se ejecuta el código síncrono)                     │
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │
+                              │
+                              │
+                              ▼
+                              ▼
+                              ▼
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+│                      Microtask Queue                        │
+│                      Microtask Queue                        │
+│                      Microtask Queue                        │
+│                      Microtask Queue                        │
+│  (Promises, queueMicrotask - alta prioridad)               │
+│  (Promises, queueMicrotask - alta prioridad)               │
+│  (Promises, queueMicrotask - alta prioridad)               │
+│  (Promises, queueMicrotask - alta prioridad)               │
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │
+                              │
+                              │
+                              ▼
+                              ▼
+                              ▼
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
+│                      Macrotask Queue                        │
+│                      Macrotask Queue                        │
+│                      Macrotask Queue                        │
+│                      Macrotask Queue                        │
+│  (setTimeout, setInterval, I/O, UI rendering)              │
+│  (setTimeout, setInterval, I/O, UI rendering)              │
+│  (setTimeout, setInterval, I/O, UI rendering)              │
+│  (setTimeout, setInterval, I/O, UI rendering)              │
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+El ciclo:
+
+========== PAGE 311 ==========
+Ejecuta todo lo que hay en el Call Stack
+Procesa TODAS las microtasks
+Procesa UNA macrotask
+Vuelve al paso 2
+Tipos de datos
+JavaScript tiene tipos primitivos y objetos.
+Primitivos:
+// String
+const nombre = 'Gentleman';
+const template = `Hola ${nombre}`; // Template literal
+// Number (enteros y decimales, mismo tipo)
+const entero = 42;
+const decimal = 3.14;
+const noEsNumero = NaN; // "Not a Number", pero typeof NaN === 'number' 🤦
+// Boolean
+const verdadero = true;
+const falso = false;
+// Undefined (variable declarada sin valor)
+let sinValor;
+console.log(sinValor); // undefined
+// Null (ausencia intencional de valor)
+const vacio = null;
+// Symbol (identificador único)
+const id = Symbol('descripcion');
+Objetos:
+// Object literal
+const persona = {
+nombre: 'Gentleman',
+edad: 30,
+saludar() {
+return `Hola, soy ${this.nombre}`;
+},
+};
+// Array (es un objeto especial)
+const numeros = [1, 2, 3, 4, 5];
+// Map (clave-valor con cualquier tipo de clave)
+const mapa = new Map();
+
+========== PAGE 312 ==========
+mapa.set('clave', 'valor');
+mapa.set(42, 'número como clave');
+// Set (valores únicos)
+const conjunto = new Set([1, 2, 2, 3, 3, 3]);
+console.log([...conjunto]); // [1, 2, 3]
+Scope y Closures
+El scope determina dónde viven las variables:
+// var: function scope (evitalo)
+// let, const: block scope
+function ejemplo() {
+if (true) {
+var conVar = 'visible fuera del if';
+let conLet = 'solo visible en el if';
+const conConst = 'también solo en el if';
+}
+console.log(conVar); // funciona
+console.log(conLet); // ReferenceError
+}
+Closures: funciones que recuerdan su scope
+function crearContador() {
+let cuenta = 0; // Esta variable "vive" en el closure
+return {
+incrementar: () => ++cuenta,
+decrementar: () => --cuenta,
+obtener: () => cuenta,
+};
+}
+const contador = crearContador();
+contador.incrementar(); // 1
+contador.incrementar(); // 2
+// No hay forma de acceder a 'cuenta' directamente
+Promises y Async/Await
+Promises representan un valor que puede estar disponible ahora, en el futuro, o nunca.
+// Estados de una Promise:
+// - pending: inicial, esperando
+// - fulfilled: operación exitosa
+// - rejected: operación fallida
+const miPromise = new Promise((resolve, reject) => {
+const exito = true;
+if (exito) {
+
+========== PAGE 313 ==========
+resolve('¡Funcionó!');
+} else {
+reject(new Error('Algo salió mal'));
+}
+});
+// Consumir con then/catch
+miPromise
+.then(resultado => console.log(resultado))
+.catch(error => console.error(error.message))
+.finally(() => console.log('Siempre se ejecuta'));
+Async/Await: syntactic sugar sobre Promises
+async function obtenerUsuario(id) {
+try {
+const response = await fetch(`/api/usuarios/${id}`);
+if (!response.ok) {
+throw new Error(`HTTP error! status: ${response.status}`);
+}
+return await response.json();
+} catch (error) {
+console.error('Error cargando usuario:', error);
+throw error;
+}
+}
+// Ejecución en paralelo
+async function cargarTodo() {
+const [usuario, posts, comentarios] = await Promise.all([
+obtenerUsuario(1),
+obtenerPosts(),
+obtenerComentarios(),
+]);
+return { usuario, posts, comentarios };
+}
+Patrones comunes
+// Debounce: esperar a que el usuario termine de escribir
+function debounce(fn, delay) {
+let timeoutId;
+return function (...args) {
+clearTimeout(timeoutId);
+timeoutId = setTimeout(() => fn.apply(this, args), delay);
+};
+}
+// Throttle: limitar frecuencia de ejecución
+function throttle(fn, limit) {
+let inThrottle;
+return function (...args) {
+if (!inThrottle) {
+fn.apply(this, args);
+inThrottle = true;
+
+========== PAGE 314 ==========
+setTimeout(() => (inThrottle = false), limit);
+}
+};
+}
+// Retry con exponential backoff
+async function fetchConRetry(url, maxRetries = 3) {
+for (let i = 0; i < maxRetries; i++) {
+try {
+const response = await fetch(url);
+if (!response.ok) throw new Error(`HTTP ${response.status}`);
+return await response.json();
+} catch (error) {
+if (i === maxRetries - 1) throw error;
+await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+}
+}
+}
+Formularios
+El problema que resolvemos
+Los formularios son la principal forma de interacción bidireccional con el usuario. Parecen simples pero
+tienen un montón de detalles: validación, accesibilidad, UX, y manejo de datos.
+Formularios HTML con validación nativa
+HTML5 incluye validación nativa que funciona sin JavaScript:
+<form action="/api/contacto" method="POST">
+<!-- Text input con validación -->
+<label for="nombre">Nombre completo</label>
+<input
+type="text"
+id="nombre"
+name="nombre"
+required
+minlength="2"
+maxlength="100"
+autocomplete="name"
+/>
+<!-- Email con validación nativa -->
+<label for="email">Email</label>
+<input type="email" id="email" name="email" required autocomplete="email" />
+<!-- Password con pattern -->
+<label for="password">Contraseña</label>
+<input
+type="password"
+id="password"
+name="password"
+
+========== PAGE 315 ==========
+required
+minlength="8"
+pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
+title="Mínimo 8 caracteres, una mayúscula, una minúscula y un número"
+/>
+<button type="submit">Enviar</button>
+</form>
+Formularios con JavaScript
+const form = document.querySelector('form');
+form.addEventListener('submit', async event => {
+event.preventDefault();
+// Obtener datos con FormData
+const formData = new FormData(form);
+const datos = Object.fromEntries(formData);
+try {
+const response = await fetch('/api/contacto', {
+method: 'POST',
+body: formData,
+});
+if (!response.ok) throw new Error('Error en el envío');
+form.reset();
+mostrarMensaje('Enviado correctamente');
+} catch (error) {
+mostrarError(error.message);
+}
+});
+// Constraint Validation API
+function validarInput(input) {
+const validity = input.validity;
+if (validity.valueMissing) return 'Este campo es obligatorio';
+if (validity.typeMismatch) return 'Formato inválido';
+if (validity.tooShort) return `Mínimo ${input.minLength} caracteres`;
+if (validity.patternMismatch) return input.title || 'Formato inválido';
+return '';
+}
+Diseño Responsivo
+El problema que resolvemos

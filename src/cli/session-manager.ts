@@ -27,6 +27,8 @@ export class SessionManager {
   private session: Session;
   private persistPath: string;
   private persistInterval: ReturnType<typeof setInterval> | null = null;
+  /** User-selected provider/model override for this session (via /provider). */
+  private _activeModel: { provider: string; model: string } | null = null;
 
   constructor(sessionId?: string) {
     this.session = {
@@ -57,6 +59,18 @@ export class SessionManager {
 
   get agentCount(): number {
     return this.session.metadata.agentCount;
+  }
+
+  /** The active provider/model override, or null to use default routing. */
+  get activeModel(): { provider: string; model: string } | null {
+    return this._activeModel;
+  }
+
+  setActiveModel(model: { provider: string; model: string } | null): void {
+    this._activeModel = model;
+    this.session.metadata.modelRef = model
+      ? `${model.provider}/${model.model}`
+      : undefined;
   }
 
   /**

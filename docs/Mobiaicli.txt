@@ -1,0 +1,1124 @@
+Si hay algo que tengo muy claro es que
+0:01
+la IA ya es parte imprescindible de
+0:03
+nuestro día a día como desarrolladores
+0:05
+de software, pero sigue habiendo un
+0:06
+problema y es que casi todas las
+0:07
+herramientas están enfocadas al
+0:09
+desarrollo web, pero eso se termina hoy
+0:11
+porque te presento Mobi AI.
+0:18
+Hola, soy Aris, tu desarrollador mobile
+0:20
+favorito y hoy te traigo una nueva
+0:23
+herramienta en la cual llevo unos meses
+0:25
+trabajando y es que, como te comento,
+0:26
+estoy harto de que todo esté enfocado en
+0:28
+desarrollo web. Un montón de
+0:30
+herramientas que voy viendo están
+0:31
+enfocadas a frameworks de web y los
+0:33
+pobres de mobile no hacemos nada nunca.
+0:36
+Y no, esto no es culpa de los que
+0:37
+desarrollan herramientas ni mucho menos.
+0:39
+Es culpa nuestra porque no aportamos
+0:41
+activamente a la comunidad. Pero sabes
+0:43
+qué, eso se acaba hoy porque traigo una
+0:47
+mega herramienta y obviamente lo mejor
+0:49
+de todo es que va a ser open source y
+0:51
+gratuita para cualquier desarrollador
+0:53
+mobile independientemente del stack. Así
+0:56
+que ahora sí os presento Mobi AI. Pero,
+0:58
+Aris, ¿qué [ __ ] es esto? Te estarás
+1:00
+preguntando. Muy buena pregunta, Aris,
+1:02
+te lo comento. La idea de Mobillai es
+1:04
+crear un pequeño framework, un pequeño
+1:06
+sistema que se encargue de ayudarnos en
+1:08
+el desarrollo mobile con la IA. Y esto
+1:12
+lo vamos a dividir en distintas
+1:13
+features. Entonces, vamos a verlo un
+1:15
+poquito más a fondo, ¿vale? También
+1:16
+puedes ponerte tu email aquí y apuntarte
+1:18
+para que cuando haya novedades te
+1:20
+notifique por email. La idea de esto a
+1:22
+día de hoy es un ecosistema enfocado en
+1:24
+IA para mobile, solo para mobile, que se
+1:27
+jodan los desarrolladores web. Y es que
+1:29
+para empezar trae un conjunto de skills
+1:32
+enfocadas en desarrollo mobile, aparte
+1:34
+de skills generales, independientemente
+1:36
+del stack, por ejemplo, para hacer TDD,
+1:39
+para analizar Crash Lytics, para
+1:41
+solucionar BGS, también trae skills
+1:43
+específicas por tecnología, desde Codlin
+1:46
+y Swift para desarrollo nativo como
+1:49
+Flatter, KMP o React Native. También va
+1:52
+a contener un cerebro, es decir, vamos a
+1:54
+tener una memoria a largo plazo de todas
+1:56
+las decisiones técnicas y works around.
+1:59
+Todo lo que desarrollemos a lo largo de
+2:01
+nuestro flujo de trabajo se va a ir
+2:03
+guardando aquí. No te preocupes porque
+2:04
+ahora voy a explicar todo más a fondo. Y
+2:06
+luego vas a tener una especie de graph a
+2:07
+encargar de la exploración semántica del
+2:09
+código. ¿Qué significa eso? Pues es
+2:11
+básicamente la forma más óptima para que
+2:14
+la IA pueda leer tu proyecto ahorrando
+2:17
+tiempo y muchísimos tokens. ¿Vale?
+2:19
+Entonces, fíjate que todo está muy
+2:21
+enfocado a desarrollo mobile y la idea
+2:24
+es optimizar nuestro flujo de trabajo al
+2:26
+máximo y de forma gratuita. Ya está.
+2:28
+Entonces, vamos a ver cómo funciona y
+2:30
+todo lo que se puede hacer, porque si
+2:32
+venimos para arriba, tenemos aquí
+2:33
+simplemente instalar CLI, ¿vale? Porque
+2:35
+todo va desde un CLI para que sea lo más
+2:37
+sencillo posible. Fíjate, a mí me
+2:39
+detecta el Mac. Entonces, simplemente
+2:41
+copias esto, vas a la terminal, voy a
+2:44
+hacer zoom para que lo veas, y pones el
+2:46
+comando. Esto automáticamente te
+2:48
+descarga la última versión de Mobili y
+2:52
+se te instala. Yo ya lo tenía instalado,
+2:54
+pero si tú no lo tenías instalado,
+2:56
+posiblemente salga un mensaje para que
+2:58
+ejecutes un comando para tener el paz,
+3:01
+que es esto que te estoy mostrando en
+3:02
+pantalla. Pero ya está, con esto lo
+3:04
+tienes todo. Entonces, te voy a enseñar
+3:06
+el repo y todo lo que puedes ir
+3:08
+haciendo. Así que lo primero que hago,
+3:09
+me vuelvo a Mobili y aunque tienes toda
+3:11
+la documentación aquí, ¿vale?, para que
+3:13
+puedas ir dando tus primeros pasos, todo
+3:15
+explicado desde cero, sencillito, si te
+3:18
+vienes a GitHub vas a ver el repo del
+3:20
+proyecto. Y como te comento, este repo
+3:22
+es open source y cualquier persona puede
+3:24
+colaborar, ya sea abriendo Pull request,
+3:26
+abriendo ISUS o lo que quiera, ¿vale?
+3:28
+Nosotros vamos a ir sacando releases. Y
+3:31
+digo nosotros porque me está ayudando
+3:33
+Mati Rosen, que es un bombita de
+3:36
+Argentina y el tío le da durísimo. Por
+3:38
+eso hay veces que vais a ver aquí algún
+3:40
+comentario que está en argentino, dice,
+3:42
+"Instalá por este cabrón." Pero bueno,
+3:44
+¿qué es lo primero que vas a tener que
+3:46
+hacer? Voy a meterle un poco de zoom. Lo
+3:48
+primerísimo y a modo de ayuda, porque es
+3:51
+un click y nos va a ayudar muchísimo a
+3:53
+que esto tenga repercusión, es darle una
+3:55
+estrella. Ya está. Vale, una estrella es
+3:57
+un clip. y nos ayuda para que esto
+3:59
+crezca, ya que encima, como os comento,
+4:01
+es un proyecto open source, es gratuito
+4:03
+y lleva muchas horas de trabajo.
+4:05
+Entonces, fíjate por aquí. Aquí tenemos
+4:07
+la primera imagen, el stack que alcanza
+4:10
+y todo lo que contiene el CLI, que es
+4:13
+básicamente nuestra herramienta que nos
+4:15
+va a permitir instalar todo, las skill,
+4:17
+el graph, el brain y el estado de todas
+4:20
+las cosas. Y lo siguiente que vamos a ir
+4:22
+metiendo, por ejemplo, ahora van a ser
+4:23
+agentes autónomos que te permiten
+4:25
+desarrollar flujos complejos de una.
+4:27
+Luego, pipeline automatizados, es decir,
+4:29
+voz de mensajería. O imagínate que tú
+4:31
+estás en el trabajo y le pasas un ticket
+4:33
+de gira y una sección de agentes. Uno
+4:36
+analiza, otro planifica el BG, otro lo
+4:39
+soluciona, otro hace Tes, ¿vale? Todo
+4:41
+eso va a estar así. Es decir, que esto
+4:43
+es bastante grande, pero necesitamos un
+4:45
+poco de apoyo en la comunidad. Lo mismo,
+4:47
+aquí tienes la instalación, el verificar
+4:49
+y demás, pero vamos a ir por partes,
+4:50
+como te comento, porque lo primero van a
+4:52
+ser las skills. Si tú vienes aquí o
+4:55
+aquí, ¿vale?, directamente vas a poder
+4:57
+ver todas las skills que tenemos y todo
+Skills
+4:59
+lo que hacen. Pero lo primero, ¿qué son
+5:01
+las skills? Porque yo voy hablando muy
+5:02
+rápido, pero puede que mucha gente no
+5:04
+sepa lo que son las skills. Para que te
+5:06
+hagas una idea, piensa que la IA es muy
+5:08
+inteligente, pero mientras más cosas
+5:10
+específicas le vayas pidiendo, vas a ver
+5:12
+que quizás no es tan inteligente, que
+5:14
+quizás comete errores. Él nunca te va a
+5:16
+decir que es un error, pero la va a ir
+5:18
+diciéndote, "Haz esto, haz esto, haz
+5:19
+esto." Y cada vez las respuestas van a
+5:20
+ser peores. ¿Qué es una skill? pues es
+5:22
+básicamente un ficherito de texto, el
+5:24
+cual ayuda a la I a decirle, por
+5:26
+ejemplo, oye, cada vez que hablen de
+5:27
+esto, vas a abrir este fichero y vas a
+5:29
+ver la última documentación. Entonces
+5:32
+eso le ayuda a tener unas respuestas más
+5:34
+potentes, evitar tener que investigar
+5:36
+online y liarla o simplemente decir
+5:38
+mentiras. Entonces, fíjate que todas
+5:40
+esas skills van a estar aquí organizadas
+5:42
+por Core. Esto nos va a ayudar para
+5:43
+flujos de trabajo, para procesos, para
+5:45
+el ecosistema, para todo eso. Luego
+5:47
+vamos a tener la parte de Android, la
+5:48
+parte de iOS, la parte de KMP, de
+5:50
+Flatter, de React Native o si
+5:52
+seleccionas mobile te lo instala todo de
+5:53
+golpe. Vale, aquí tienes un poquito de
+5:55
+información, la instalación que ahora la
+5:56
+vamos a ver, la vamos a hacer en
+5:58
+directo, pero fíjate algunas cosillas
+6:00
+que trae. Voy a hacer un poquito más de
+6:01
+zoom, por ejemplo, Mobi Crash Lytics.
+6:04
+¿Qué pasa con esto? pues que si tú a tu
+6:06
+IA, a la que sea, porque esto sirve para
+6:08
+todas, le pasas un link de un error de
+6:10
+Crash Littics, automáticamente va a
+6:12
+tener unos procesos para trabajar porque
+6:15
+va a decir, "Vale, esto es un error de
+6:16
+Crashletics, voy a abrir la skill de
+6:18
+Mobi Crashletics." Y lo estructura de
+6:21
+tal forma que primero analiza el error,
+6:24
+luego propone una solución, divide, hace
+6:27
+test, todo eso nos lo va a preparar
+6:29
+automáticamente gracias a estas skills.
+6:31
+¿Qué vas a hacer una pool request? Pues
+6:32
+Mobi te lo organiza y te estructura una
+6:35
+Apple request bastante tocha,
+6:37
+estructurada con todo lo necesario y así
+6:39
+con todo porque tienes hasta para
+6:40
+brainstorming, explorar ideas. Tú le
+6:42
+dices, "Oye, quiero desarrollar esta
+6:44
+feature" y empieza a hablar contigo para
+6:46
+montarte un plan Mobile TDD para
+6:48
+trabajar y testear a la vez y hacer las
+6:50
+cosas bien. Con esta skill, si hay
+6:52
+tareas que se pueden hacer en paralelo,
+6:53
+va a crear pequeños subagentes para que
+6:56
+trabajen. Es decir, que tenemos un
+6:58
+montón, ¿vale? algunas enfocadas para
+7:01
+las siguientes herramientas que vamos a
+7:02
+ver, pero fíjate que lo tienes todo aquí
+7:04
+organizado y además tiene las skills
+7:07
+oficial de Android, las que ha sacado
+7:08
+Android las tiene aquí y las va
+7:10
+actualizando siempre que Google
+7:12
+actualice. Entonces, con tener esta
+7:14
+herramienta ya tienes todas las skills
+7:15
+necesarias. Y por último, tenemos una
+7:17
+skill que te ayuda a crear tus propias
+7:19
+skills, ya que vas a poder crearlas
+7:21
+tuyas y añadirlas al proyecto, hacer una
+7:23
+pool request y colaborar con el proyecto
+7:25
+o hacértelas para ti. Pero, ¿cómo
+7:26
+funciona esto? Fíjate qué sencillo es.
+7:28
+Te abres tu terminal. Vamos a hacer un
+7:30
+clear. Voy a ponerme un poquito más en
+7:32
+grande hasta que se vea bien. Ahí clear.
+7:34
+Y simplemente haces mobillai skills
+7:37
+init. Pumba. Al darle te va a dejar
+7:39
+seleccionar los que tú quieras. A través
+7:41
+de espacio puedes añadirlos o borrarlos.
+7:43
+Yo ya los tenía todos añadidos, ¿no?
+7:45
+Pues entonces, fíjate, hago así, lo
+7:47
+borro todo pulsando enter, confirmo con
+7:49
+y me lo ha borrado todo, pero yo vuelvo
+7:52
+a hacer un clear y repito el proceso
+7:54
+para que veáis lo que os sale a ustedes.
+7:55
+Pumba, te dice, "Oye, ¿qué quieres
+7:57
+instalarte? Flatter, flatter. KMP, pues
+8:02
+necesita iOS y Android te lo mete.
+8:04
+Mobile, te lo mete todo lo que tú
+8:05
+quieras. Le das a enter, confirmas y
+8:08
+fíjate que automáticamente me lo está
+8:10
+metiendo en todos los ids que tengo, que
+8:13
+serían cloud code, cursor, id y e as no
+8:16
+yemini codes, Ghacopilot y Uni.
+8:19
+Entonces, con un solo clic o con un
+8:21
+enteres todo configurado. Lo siguiente
+Brain
+8:23
+que tenemos es el cerebro, algo que me
+8:26
+mola muchísimo. Y fijaros por aquí, la
+8:29
+memoria viva por proyecto, decisiones,
+8:31
+backfixes, works around, integraciones
+8:33
+específicas, todo separadas del estado
+8:36
+global de Mobi. ¿Qué significa eso? que
+8:38
+tú cada vez que llegues a un proyecto en
+8:40
+el que vas a trabajar, vamos a meternos
+8:42
+por aquí un segundo, cada vez que entres
+8:43
+en un proyecto, tú vas a poder
+8:45
+inicializar el cerebro ahí y a partir de
+8:47
+ahí la IA va a ir guardando todas las
+8:49
+decisiones técnicas, todos los problemas
+8:51
+en esa memoria. ¿Para qué te ayuda esto?
+8:53
+Pues en el futuro, si ya hay decisiones
+8:55
+tomadas, no tienes que retomarlas. Si
+8:58
+llega otra persona y dices, "Oye, ¿por
+8:59
+qué se hizo esto?" Va a tener el
+9:01
+contexto global. Y es básicamente un
+9:04
+diario, una memoria para evitar perder
+9:06
+nada de información del proyecto. Esto
+9:09
+encima si trabajas en equipo es una
+9:10
+maravilla. Y como te comento, es
+9:11
+conocimiento específico por proyecto,
+9:14
+¿vale? Esto lo inicias en el proyecto
+9:16
+que tú quieras. Fíjate, vas a la ruta de
+9:18
+tu proyecto, haces el moviin init y ya
+9:21
+está. Luego le dices que escane el stack
+9:23
+y ya lo tienes todo. Entonces la en
+9:25
+cualquier momento puede hacer context,
+9:26
+por ejemplo, o puede leer, ya que lo va
+9:29
+a escribir de una forma semántica que
+9:30
+sea muy sencillo de leer para el humano,
+9:33
+pero también para la IA. Y luego, fíjate
+9:34
+que tiene su propio MCP para que tú
+9:37
+puedas o para que nuestros agentes
+9:39
+puedan conectarse directamente a él.
+9:41
+Fijaros, aquí tenéis toda la
+9:42
+documentación. Y le dice, "Oye, dame el
+9:44
+contexto. Oye, eh, búscame algo. Oye,
+9:47
+escanea lo que sea. Analiza lo que sea,
+9:49
+¿vale?" Y todo va conectado al cerebro.
+9:51
+Y entonces, como te comento, fíjate qué
+9:53
+resuelve. pues todos los proyectos
+9:55
+mobile acumulan ese conocimiento
+9:56
+histórico que puede cambiar y que se
+9:58
+puede perder completamente. Entonces,
+10:00
+nosotros ya tenemos un fichero Cloud MD
+10:03
+o similares, pero Cloud MD es como para
+10:04
+decisiones fijas que no van a ir
+10:06
+cambiando, ya que no lo lee tan a
+10:08
+menudo. De todos modos, fíjate que ahora
+10:09
+que hay un esquema, pero básicamente le
+10:11
+podes decir, vamos a usar Coin y no he o
+10:14
+firebase out de iOS necesita con up en
+10:17
+minúscula hasta la próxima versión de
+10:19
+Cocoaps. Pues como esto sería un work
+10:21
+around, lo va a guardar en esa memoria
+10:23
+para luego en el futuro decirte, "Oye,
+10:24
+Aris, todavía este work around ¿quieres
+10:26
+que lo solucionemos ya que ya se puede?"
+10:28
+y demás, porque si no pasan 6 meses y
+10:30
+nadie sabe por qué está eso así. Y por
+10:32
+ejemplo aquí el test de data store tiene
+10:33
+que esperar al data first y hacer esto
+10:36
+primero antes del clear o lo que sea.
+10:38
+Todo esto son decisiones reales que me
+10:40
+han ido ocurriendo y que se han ido
+10:42
+guardando. Entonces para mí es la
+10:44
+memoria perfecta para que nuestra IA
+10:46
+tenga el conocimiento completo. Entonces
+10:48
+fíjate la diferencia entre tener un
+10:50
+Cloud MD o un AGM MD, un Yemini MD con
+10:53
+el brain y aparte te lo comparo con las
+10:55
+skills por si todavía estás un poco
+10:56
+confundido, ¿vale? Las skill, por
+10:58
+ejemplo, ¿qué guarda? las metodologías,
+11:00
+todas esas órdenes de cómo trabajar
+11:02
+globalmente, no por proyecto. Por
+11:04
+ejemplo, en trabajar con CODL multiplat
+11:07
+tiene una serie de normas que son
+11:09
+obligatorias para unas buenas prácticas.
+11:10
+Pues eso es una skill. En el cloud MD
+11:12
+podemos guardar esas reglas estables del
+11:14
+proyecto. Por ejemplo, vamos a usar esta
+11:16
+arquitectura y vamos a usar estos
+11:18
+patrones. Ya está. Pero Mobi Brain vamos
+11:20
+a añadir el conocimiento que va
+11:22
+cambiando, todas las novedades que van
+11:23
+ocurriendo. Entonces, cloud como norma
+11:25
+general no se suele actualizar. el Cloud
+11:27
+agen o el Gemini y el Mobi AI Brain sí
+11:30
+se va actualizando todo el rato. Todos
+11:31
+los wars temporales, las decisiones, las
+11:34
+revisiones, todo se va guardando y
+11:35
+también importante, se va a guardar
+11:37
+siempre en un formato estructurado para
+11:39
+que el propio MSP pueda leerlo
+11:42
+correctamente siempre. Y esto es un
+11:43
+poquito la filosofía, ¿no? Lo local
+11:45
+primero, es decir, si tú no lo quieres
+11:47
+subir, se queda en tu proyecto y es
+11:48
+completamente offline, completamente
+11:50
+seguro porque no sale de tu ordenador.
+11:52
+Es por proyecto, ya que las decisiones
+11:54
+de un proyecto no tienen que ser igual.
+11:56
+No voy a tomar las mismas decisiones
+11:57
+trabajando en Flatter que en React
+11:58
+Native. Es mobile first. Está todo
+12:00
+encargado para escanear tecnologías
+12:03
+mobile. Si es KMP, si es React, si es
+12:05
+flatter, si es nativo, lo que sea, pero
+12:07
+todo enfocado y todo el conocimiento y
+12:09
+toda la caña está hecha para que le dé
+12:11
+la máxima potencia al desarrollo mobile
+12:13
+y obviamente seguridad máxima. Vas a ver
+12:15
+que el brain nunca va a añadir
+12:17
+información sensible como el Google
+12:19
+Service de Firebase o los Environment,
+12:21
+nada. Puede decir que existen, pero
+12:23
+nunca poner su información. Y aquí
+12:24
+tenéis un poco de esos comandos que os
+12:27
+comentaba. Entonces, como os comentaba,
+12:28
+os pongo un ejemplo real, ¿vale? Este es
+12:31
+un proyecto de pruebas del curso de
+12:33
+testing que publiqué, ¿vale? Está en
+12:34
+rojo porque no he añadido las
+12:35
+dependencias o no he sincronizado, pero
+12:37
+por ejemplo, yo que sé, eh, aquí full
+12:39
+testing, todo. Yo podría venirme a este
+12:41
+proyecto desde el terminal, aquí en la
+12:43
+ruta principal del proyecto, simplemente
+12:45
+tendría que hacer un mobi brain init.
+12:49
+Fíjate lo que me dice. Proyecto
+12:50
+detectado, creado el mobiliz brain.
+12:53
+Memorias inicializadas. Si ya lo tienes
+12:55
+inicializado, no te va a sobreescribir
+12:57
+nada, no se pierda, así que no hay
+12:58
+problema. Y luego lo único que tienes
+13:00
+que hacer es este comando. Mobili brain
+13:02
+scan. Fíjate, le damos por aquí. ya ha
+13:05
+detectado que es un proyecto Android,
+13:07
+que está hecho con compose, que de
+13:08
+inyección dependencia utiliza Heill de
+13:10
+Persistencia Room y todas las librerías
+13:13
+de testing que contiene. Entonces, si yo
+13:15
+ahora vengo al proyecto y voy al
+13:16
+directorio mobile ya creado, fíjate que
+13:18
+tengo la configuración, fíjate que
+13:20
+también tengo la información del
+13:22
+proyecto y luego tengo todos los
+13:24
+ficheros ya generados, backfixes,
+13:26
+decisions, integración, release y
+13:29
+testing. Y esto se va a ir añadiendo o
+13:32
+actualizando automáticamente gracias a
+13:34
+las skills. Entonces, todo se va
+13:36
+convirtiendo en un círculo que lo
+13:38
+sincroniza y lo optimiza todo. Y por
+Graph
+13:40
+último, pero no menos importante, os
+13:42
+traigo por aquí graf, ¿vale? Exploración
+13:46
+semántica del código mobile, resuelve
+13:48
+básicamente qué archivos tocar o quién
+13:50
+llamaste símbolo sin recorrer el repo a
+13:53
+ciegas. ¿Qué significa eso? Pues tú, por
+13:55
+ejemplo, cuando estás trabajando con la
+13:56
+IA y le dices, "Oye, analiza este esta
+13:59
+clase, mira a ver dónde se llama todas
+14:01
+esas cosas." Pues la IA se pone a hacer
+14:03
+grabs, se pone a hacer comandos para
+14:05
+leer todo el proyecto. El problema de
+14:07
+eso que consume muchísimos tokens y
+14:11
+mucho tiempo si el proyecto es grande.
+14:12
+Entonces, para ello tenemos graf.
+14:15
+Fíjate, graf, todo esto que está
+14:17
+montado, que por ahora solo está para
+14:18
+CODL nativo y para Swift, no está para
+14:20
+Reactive ni Flatter. Dadme un poquito de
+14:22
+tiempo que es la primera versión. Todo
+14:24
+esto nace de una herramienta que ya
+14:26
+existe y es que si bajamos por aquí un
+14:28
+segundo, vamos a encontrar esto,
+14:30
+inspiración, ¿vale? Obviamente no voy a
+14:32
+reinventar la rueda. Ya existi un
+14:33
+proyecto muy popular que es Codegraf,
+14:36
+fíjate, un grafo semántico para acelerar
+14:39
+los agentes de IA. Esto es un proyecto
+14:41
+tochísimo, fíjate. 26,000 estrellas es
+14:45
+una maravilla, ¿no? Eh, te ayuda te
+14:47
+ayuda a gastar un 35% menos de tokens,
+14:51
+100% local y demás. Esto está genial.
+14:53
+Entonces, Haris, ¿por qué lo hiciste?
+14:55
+¿Por qué reinventas las cosas? Pues por
+14:57
+esto, coleguita, porque si bajamos por
+14:59
+aquí, fíjate los framework con los que
+15:00
+trabaja. JJo, Flash, Express, Nes, Lara,
+15:03
+Beldrupal. Oh, qué sorpresa. Siempre
+15:06
+está enfocado en web y en Bag y en su
+15:08
+[ __ ] madre. Pero claro, por ser justo,
+15:10
+fijaros, están sacando alguna cosilla de
+15:13
+iOS. Vale, por aquí todo esta zona. A
+15:15
+ver, tucu tucu aquí. Pero claro, tampoco
+15:18
+hay nada de Android. Entonces, yo no
+15:21
+quiero utilizar una herramienta que no
+15:23
+está enfocada para mi trabajo real. Así
+15:25
+que dije, "Vale, lo hago yo, le meto
+15:27
+amor y me encargo de montar lo más tocho
+15:30
+que se pueda y enfocarlo a herramientas
+15:33
+nativas de tecnologías que necesito y
+15:35
+que no hay." Y de ahí sale Mobili Graft.
+15:38
+Aquí obviamente os vuelvo a poner la
+15:40
+comparativa porque sé que es muy confuso
+15:42
+al principio, el brain que se decidió y
+15:44
+demás y el graph la estructura actual
+15:46
+del código. Aquí vemos cómo funciona que
+15:49
+solo hacer Mobi graph init y ya está.
+15:51
+Aquí algunas decisiones técnicas, esto
+15:53
+puede ir variando porque la idea es
+15:55
+seguir mejorándolo a través de vuestro
+15:56
+feedback y esto es un ejemplo real. Tú
+15:58
+cuando le dices que se inicie, va a
+16:00
+generar un fichero con todos los
+16:03
+archivos, los símbolos, si es codlin, si
+16:04
+swift, para que la IA lea ese fichero. Y
+16:07
+aquí os traigo un benchmark real, ¿vale?
+16:09
+lo que hace el graf y lo que hace el
+16:10
+GREP, que el Grap es lo que suele hacer
+16:12
+la IA para poder leer el fichero.
+16:14
+Fíjate, esto es una prueba de un
+16:15
+proyecto pequeño que indexó 647
+16:19
+ficheros, generó esto y tardó en hacer
+16:21
+el graph init 0,47 segundos, es decir,
+16:24
+medio segundo. Entonces, fijaros lo que
+16:26
+tardo en buscar por palabra view model
+16:29
+con el graf 0,01 segundos. Con el grab y
+16:33
+demás, con las herramientas como lo
+16:34
+haría la tardaría 0,15 segundos. Aquí
+16:36
+parece que no cambia mucho la cosa. Voy
+16:38
+a ponerme arriba por si acaso. Vale,
+16:39
+aquí parece que no cambia mucho la cosa.
+16:41
+Entonces, esto, bueno, se queda bastante
+16:43
+igual. Aquí, por ejemplo, perdemos, pero
+16:45
+ahorramos tokens. Pero lo importante y
+16:48
+por lo que estamos en fase alfa todavía,
+16:50
+es por esta parte aquí. El contexto,
+16:52
+saber si existen ficheros y dónde se
+16:55
+declaran. Aquí es donde notamos mejoría,
+16:57
+porque aunque los tiempos son mejores
+16:59
+tampoco se nota, ¿no? 0,01 segundos con
+17:01
+0,3 segundos. Pero fijaros aquí el
+17:04
+ahorro de tokens ya es más tocho.
+17:06
+Fijaros lo que gastaría una normal y lo
+17:09
+que ahorraríamos con esto. Es decir, que
+17:11
+esto es un ahorro de 6,3 veces los
+17:13
+tokens y aquí 7,5. Y esto siendo la
+17:16
+primera versión que estoy probando
+17:17
+porque no tengo equipo, lo voy
+17:18
+desarrollando en mi tiempo libre, como
+17:20
+tampoco quiero ser un vende de humos,
+17:21
+aquí está la suma total, ¿vale? Con el
+17:24
+Grab de todo esto hubiésemos tardado
+17:25
+0,22 segundos y hubiésemos gastado 5000
+17:29
+tokens. con nuestro grafo hubiésemos
+17:31
+gastado solo 0,10 y ya hemos agarrado
+17:34
+aquí un 22% de los tokens. Esto es con
+17:36
+la suma global. No estoy usando solo el
+17:39
+campo bueno para que parezca una
+17:40
+burrada, pero como os comento, hemos
+17:42
+ganado, hemos mejorado esto y es la
+17:45
+primera versión de todas que todavía
+17:47
+está en markdown. Quiero pasarlo a SQL.
+17:49
+Entonces, aquí tenéis un poquito de
+17:50
+información cómo trabaja, ¿vale? Pero es
+17:53
+muy sencillo, ¿vale? Solo te vienes a tu
+17:55
+proyecto, al que tú quieras. Estábamos
+17:57
+en esta, así que vamos a seguir. Fíjate,
+17:59
+terminal, hacemos un clear mobi ai graf
+18:03
+init, pumba, índice generado. Ya está. Y
+18:06
+fíjate que lo que nos ha creado es aquí
+18:08
+un directorio graf con el index jsjon
+18:10
+que si lo abrimos es este documento que
+18:13
+parece un poco confuso, pero esto es lo
+18:16
+mejor para que la IA pueda analizar tu
+18:18
+proyecto. Y eso es todo lo que hay por
+Colabora
+18:20
+ahora en Mobiji. Y como te comento, todo
+18:23
+es gratis y open source, pero ahí viene
+18:26
+el pero voy a necesitar vuestra ayuda y
+18:28
+no suelo pedir esto, pero realmente
+18:31
+necesito vuestro apoyo ahora al máximo.
+18:33
+¿Y qué es lo que os voy a pedir? apoyo.
+18:35
+Tan sencillo como eso, por ejemplo,
+18:37
+simplemente venir aquí y darle una
+18:38
+estrella, ir a la descripción de este
+18:40
+vídeo, que es donde van a estar los
+18:41
+links del tweet que voy a poner en
+18:43
+Twitter, del post que voy a poner
+18:44
+LinkedIn y retweetearlo y moverlo o
+18:47
+incluso hacer postes y mencionarme. Yo
+18:49
+los voy a intentar retwitear todo porque
+18:51
+realmente me gustaría que esto llegue a
+18:53
+toda la comunidad de desarrollo mobile.
+18:55
+Siento que somos la comunidad que está
+18:56
+más dispersada y que menos colabora
+18:57
+juntas, entonces quiero que esto se
+19:00
+vuelva viral. Y es que ya está, es
+19:02
+gratuito, todos podemos colaborar y
+19:04
+podemos hacer una burrada de herramienta
+19:06
+de framework, como quieran llamarlo,
+19:08
+¿vale? Nuestro propio sistema. Que es
+19:10
+más, fijaros, todos los que colaboréis
+19:11
+vais a aparecer aquí porque esto no es
+19:13
+mío, es de la comunidad y es a lo que
+19:15
+quiero que lleguemos. Y también si
+19:16
+encuentras fallos, lo que sea,
+19:18
+repórtalos. Es una herramienta muy muy
+19:20
+nueva que va a necesitar mucho amor.
+19:22
+Fíjate por aquí que acabas de sacar la
+19:24
+0.20. Es decir, que es muy nuevo todo,
+19:27
+pero hay mucha ilusión. Así que ahora
+19:29
+sí, poquito más que decir.
+

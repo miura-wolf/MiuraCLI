@@ -18,8 +18,13 @@ import type {
   LLMResult,
   ModelRef,
   PluginHostAPI,
-  ToolCall,
 } from '../../../core/types.js';
+import {
+  parseToolCalls,
+  toOpenAIMessages,
+  toOpenAITools,
+  type WireToolCall,
+} from '../openai-compat.js';
 
 export interface LlamaAdapterConfig {
   /** Base URL of llama-server. Default: http://127.0.0.1:8050 */
@@ -73,26 +78,16 @@ export class LlamaAdapter implements LLMAdapter {
     // Build request body (OpenAI-compatible)
     const body: Record<string, unknown> = {
       model: modelId,
-      messages: messages.map((m) => ({
-        role: m.role === 'tool' ? 'tool' : m.role,
-        content: m.content,
-        ...(m.role === 'tool' ? { tool_call_id: (m as unknown as { toolCallId?: string }).toolCallId } : {}),
-      })),
+      messages: toOpenAIMessages(messages),
       max_tokens: options.maxTokens ?? 8192,
       temperature: options.temperature ?? 0.7,
       stream: false,
     };
 
     // Tool calling — llama-server v0.3+ supports OpenAI function format
-    if (options.tools && options.tools.length > 0) {
-      (body as Record<string, unknown>).tools = options.tools.map((t) => ({
-        type: 'function',
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.parameters,
-        },
-      }));
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      (body as Record<string, unknown>).tools = wireTools;
       (body as Record<string, unknown>).tool_choice = 'auto';
     }
 
@@ -111,21 +106,10 @@ export class LlamaAdapter implements LLMAdapter {
     const choice = data.choices[0];
     const message = choice?.message;
 
-    // Parse tool calls (OpenAI-compatible function format)
-    const toolCalls: ToolCall[] = [];
-    if (message?.tool_calls) {
-      for (const tc of message.tool_calls) {
-        try {
-          const args = JSON.parse(tc.function.arguments);
-          toolCalls.push({ name: tc.function.name, arguments: args });
-        } catch {
-          toolCalls.push({
-            name: tc.function.name,
-            arguments: { _raw: tc.function.arguments },
-          });
-        }
-      }
-    }
+    // Parse tool calls (preserving provider ids) via shared helper.
+    const toolCalls = parseToolCalls(
+      message?.tool_calls as WireToolCall[] | undefined,
+    );
 
     const output = message?.content ?? '';
 
@@ -159,17 +143,15 @@ export class LlamaAdapter implements LLMAdapter {
 
     const body: Record<string, unknown> = {
       model: modelId,
-      messages: messages.map((m) => ({ role: m.role === 'tool' ? 'tool' : m.role, content: m.content })),
+      messages: toOpenAIMessages(messages),
       max_tokens: options.maxTokens ?? 8192,
       temperature: options.temperature ?? 0.7,
       stream: true,
     };
 
-    if (options.tools && options.tools.length > 0) {
-      (body as Record<string, unknown>).tools = options.tools.map((t) => ({
-        type: 'function',
-        function: { name: t.name, description: t.description, parameters: t.parameters },
-      }));
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      (body as Record<string, unknown>).tools = wireTools;
       (body as Record<string, unknown>).tool_choice = 'auto';
     }
 

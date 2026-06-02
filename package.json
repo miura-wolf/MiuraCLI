@@ -8,8 +8,9 @@
     "miura": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && bun build src/cli/index.ts --compile --outfile dist/miura.exe",
-    "postinstall": "bun install --no-dev",
+    "build": "tsc && bun build src/cli/index.ts --compile --outfile dist/miura.exe && bun run copy-wasm",
+    "copy-wasm": "mkdir -p dist/wasm && cp node_modules/tree-sitter-typescript/tree-sitter-typescript.wasm node_modules/tree-sitter-typescript/tree-sitter-tsx.wasm node_modules/tree-sitter-javascript/tree-sitter-javascript.wasm node_modules/tree-sitter-go/tree-sitter-go.wasm node_modules/tree-sitter-python/tree-sitter-python.wasm node_modules/web-tree-sitter/web-tree-sitter.wasm dist/wasm/ 2>/dev/null || true",
+    "postinstall": "bun run build",
     "dev": "tsc --watch",
     "test": "bun test",
     "test:watch": "bun test --watch",

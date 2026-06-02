@@ -6,8 +6,13 @@ import type {
   LLMResult,
   ModelRef,
   PluginHostAPI,
-  ToolCall,
 } from '../../../core/types.js';
+import {
+  parseToolCalls,
+  toOpenAIMessages,
+  toOpenAITools,
+  type WireToolCall,
+} from '../openai-compat.js';
 
 const BASE_URL = 'https://api.groq.com/openai/v1';
 
@@ -47,14 +52,14 @@ export class GroqAdapter implements LLMAdapter {
     // Build body with optional tools support
     const body: any = {
       model: model.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: toOpenAIMessages(messages),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature ?? 0.7,
     };
 
-    // Add tools if provided (OpenAI-compatible format)
-    if (options.tools && options.tools.length > 0) {
-      body.tools = options.tools;
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      body.tools = wireTools;
       body.tool_choice = 'auto';
     }
 
@@ -89,18 +94,10 @@ export class GroqAdapter implements LLMAdapter {
     const choice = data.choices[0];
     const message = choice.message;
 
-    // Parse tool_calls if present
-    const toolCalls: ToolCall[] = [];
-    if (message.tool_calls) {
-      for (const tc of message.tool_calls) {
-        try {
-          const args = JSON.parse(tc.function.arguments);
-          toolCalls.push({ name: tc.function.name, arguments: args });
-        } catch {
-          toolCalls.push({ name: tc.function.name, arguments: { _raw: tc.function.arguments } });
-        }
-      }
-    }
+    // Parse tool_calls (preserving provider ids) via shared helper.
+    const toolCalls = parseToolCalls(
+      message.tool_calls as WireToolCall[] | undefined,
+    );
 
     return {
       output: message.content ?? '',
@@ -118,14 +115,15 @@ export class GroqAdapter implements LLMAdapter {
     // Build body with optional tools support for streaming
     const body: any = {
       model: model.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: toOpenAIMessages(messages),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature ?? 0.7,
       stream: true,
     };
 
-    if (options.tools && options.tools.length > 0) {
-      body.tools = options.tools;
+    const wireTools = toOpenAITools(options.tools);
+    if (wireTools) {
+      body.tools = wireTools;
       body.tool_choice = 'auto';
     }
 
