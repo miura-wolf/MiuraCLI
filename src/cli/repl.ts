@@ -161,13 +161,15 @@ async function executeInput(
 	const match = registry.match(input);
 
 	if (!match) {
-		// Free-text → run as a quick chat agent
+		// Free-text → run as a quick chat agent. Persist the user turn
+		// first, then pull the conversation as structured LLMMessage[]
+		// so the agent can continue any prior tool-call/tool-result
+		// history (the /resume path). We slice off the trailing user
+		// turn because runAgent appends its own user turn for `input`.
 		session.addUser(input);
-		const recent = session.getRecentMessages(10);
-		const contextPrompt =
-			recent.length > 0
-				? `Recent session context:\n${recent.map((m) => `${m.role}: ${m.content.slice(0, 200)}`).join("\n")}\n\nCurrent task:\n${input}`
-				: input;
+		const fullHistory = session.getHistoryAsLLMMessages();
+		const history = fullHistory.slice(0, -1);
+		const contextPrompt = input;
 
 		// Subscribe to live events BEFORE calling runAgent. The agent loop
 		// emits `agent.token` per streamed content chunk and `agent.toolCalled`
@@ -215,9 +217,29 @@ async function executeInput(
 				override
 					? { provider: override.provider as any, model: override.model }
 					: undefined,
+				{ history },
 			);
-			session.addAssistant(result.output);
 			session.incAgents();
+			// Persist the full ReAct loop so /resume can replay it.
+			// - If the agent made tool calls, the assistant turn carries them
+			//   and each result is a separate `tool` turn linked by id.
+			// - If no tool calls, it's a plain text reply (old behaviour).
+			if (result.toolCalls && result.toolCalls.length > 0) {
+				session.addAssistantTurn(result.output, result.toolCalls);
+				result.toolCalls.forEach((call, i) => {
+					const t = result.toolResults?.[i];
+					if (t) {
+						session.addToolResult(
+							call.id ?? `call_${i}`,
+							t.name,
+							t.output,
+							t.error,
+						);
+					}
+				});
+			} else {
+				session.addAssistant(result.output);
+			}
 
 			if (streamedAny) {
 				// Tokens were already printed live. End the streamed line

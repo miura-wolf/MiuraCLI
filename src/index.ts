@@ -358,6 +358,7 @@ export class MiuraSwarm {
 		role: AgentRole,
 		input: string,
 		forcedModel?: ModelRef,
+		options?: { history?: LLMMessage[] },
 	): Promise<AgentResult> {
 		this.ensureInitialized();
 		const agentPlugin = this.agentPlugins.get(role);
@@ -382,9 +383,18 @@ export class MiuraSwarm {
 					{ host: this },
 				);
 
-				// Build initial conversation
+				// Build initial conversation. If a `history` was supplied
+				// (e.g. by /resume from a previous session), splice it in
+				// between the system prompt and the new user turn so the
+				// agent can continue the prior ReAct loop with full
+				// tool-call/tool-result context. The session's own system
+				// messages are skipped by the caller (SessionManager does
+				// the filtering), so we don't risk overwriting the agent's
+				// dynamic system prompt.
+				const history = options?.history ?? [];
 				const chat: LLMMessage[] = [
 					{ role: "system", content: composed.prompt },
+					...history,
 					{ role: "user", content: input },
 				];
 

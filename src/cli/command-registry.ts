@@ -1677,6 +1677,84 @@ Strategies can be configured with JSON options:
 				}
 			},
 		});
+
+		// ─── /sessions ───────────────────────────────────────────────────────────
+		this.register({
+			name: "sessions",
+			description: "List saved REPL sessions you can /resume",
+			usage: "",
+			handler: async (ctx) => {
+				const { SessionManager } = await import(
+					"../cli/session-manager.js"
+				);
+				const list = SessionManager.listSessions();
+				if (list.length === 0) {
+					return {
+						output:
+							"No saved sessions yet. Sessions are auto-saved to ~/.miura/sessions/ as you chat.",
+						type: "info",
+					};
+				}
+				const lines = list
+					.sort((a, b) => b.createdAt - a.createdAt)
+					.slice(0, 20)
+					.map((s) => {
+						const date = new Date(s.createdAt).toISOString().slice(0, 16).replace("T", " ");
+						const mark = s.id === ctx.session.id ? " ← current" : "";
+						return `  ${s.id}  ${s.messageCount} msgs  ${date}${mark}`;
+					});
+				return {
+					output:
+						`Saved sessions (${list.length}, showing newest 20):\n` +
+						lines.join("\n") +
+						`\n\nUse /resume <id> to continue a previous conversation.`,
+					type: "info",
+				};
+			},
+		});
+
+		// ─── /resume <id> ────────────────────────────────────────────────────────
+		this.register({
+			name: "resume",
+			description: "Continue a previous REPL session (loads its history)",
+			usage: "<session-id>",
+			handler: async (ctx, args) => {
+				const id = args.trim();
+				if (!id) {
+					return { output: "Usage: /resume <session-id>", type: "error" };
+				}
+				const { SessionManager } = await import(
+					"../cli/session-manager.js"
+				);
+				const loaded = SessionManager.load(id);
+				if (!loaded) {
+					return {
+						output: `Session not found: ${id}\nUse /sessions to see available ones.`,
+						type: "error",
+					};
+				}
+				// Replace the in-memory session so the next free-text
+				// turn continues the previous conversation. The loaded
+				// session's messages are already on disk from the original
+				// run; we also persist the new id assignment on the next
+				// mutation.
+				ctx.session.replaceWith(loaded);
+				const msgs = loaded.messages;
+				const toolMsgs = msgs.filter((m) => m.role === "tool").length;
+				const assistantWithTools = msgs.filter(
+					(m) => m.role === "assistant" && m.toolCalls && m.toolCalls.length > 0,
+				).length;
+				return {
+					output:
+						`Resumed session ${loaded.id}\n` +
+						`  ${msgs.length} messages (${toolMsgs} tool results, ${assistantWithTools} tool-calling turns)\n` +
+						`  created: ${new Date(loaded.createdAt).toISOString()}\n` +
+						`  updated: ${new Date(loaded.updatedAt).toISOString()}\n\n` +
+						`Your next message will continue this conversation.`,
+					type: "success",
+				};
+			},
+		});
 	}
 
 	register(cmd: CommandDef): void {

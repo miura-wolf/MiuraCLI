@@ -350,4 +350,136 @@ describe("CommandRegistry", () => {
 			expect(result.output).toContain("not initialized");
 		});
 	});
+
+	describe("/sessions command", () => {
+		it("is registered", () => {
+			const cmd = registry.get("sessions");
+			expect(cmd).toBeDefined();
+			expect(cmd!.name).toBe("sessions");
+		});
+
+		it("returns info when no sessions exist", async () => {
+			// Monkey-patch the static listSessions to a controlled value.
+			const SM = (await import("./session-manager.js")).SessionManager;
+			const original = SM.listSessions;
+			SM.listSessions = () => [];
+			try {
+				const cmd = registry.get("sessions")!;
+				const ctx = makeCtx();
+				const result = await cmd.handler(ctx, "");
+				expect(result.type).toBe("info");
+				expect(result.output).toContain("No saved sessions");
+			} finally {
+				SM.listSessions = original;
+			}
+		});
+
+		it("lists saved sessions, marking the current one", async () => {
+			const SM = (await import("./session-manager.js")).SessionManager;
+			const originalList = SM.listSessions;
+			SM.listSessions = () => [
+				{ id: "alpha", createdAt: 100, messageCount: 3 },
+				{ id: "test-session", createdAt: 200, messageCount: 5 },
+			];
+			try {
+				const cmd = registry.get("sessions")!;
+				const ctx = makeCtx();
+				const result = await cmd.handler(ctx, "");
+				expect(result.type).toBe("info");
+				expect(result.output).toContain("alpha");
+				// 'test-session' is the ctx.session.id, so it gets the
+				// '← current' marker appended on the same line.
+				expect(result.output).toMatch(/test-session.*\u2190 current/);
+				expect(result.output).toContain("Use /resume");
+			} finally {
+				SM.listSessions = originalList;
+			}
+		});
+	});
+
+	describe("/resume command", () => {
+		it("is registered", () => {
+			const cmd = registry.get("resume");
+			expect(cmd).toBeDefined();
+			expect(cmd!.name).toBe("resume");
+		});
+
+		it("returns error when no id is given", async () => {
+			const cmd = registry.get("resume")!;
+			const ctx = makeCtx();
+			const result = await cmd.handler(ctx, "");
+			expect(result.type).toBe("error");
+			expect(result.output).toContain("Usage: /resume");
+		});
+
+		it("returns error when session does not exist", async () => {
+			const SM = (await import("./session-manager.js")).SessionManager;
+			const originalLoad = SM.load;
+			SM.load = () => null;
+			try {
+				const cmd = registry.get("resume")!;
+				const ctx = makeCtx();
+				const result = await cmd.handler(ctx, "nonexistent-id");
+				expect(result.type).toBe("error");
+				expect(result.output).toContain("Session not found");
+			} finally {
+				SM.load = originalLoad;
+			}
+		});
+
+		it("replaces the session with the loaded one and reports stats", async () => {
+			const SM = (await import("./session-manager.js")).SessionManager;
+			const originalLoad = SM.load;
+			const loadedSession = {
+				id: "loaded-1",
+				createdAt: Date.now() - 1000,
+				updatedAt: Date.now(),
+				messages: [
+					{ role: "user", content: "u", timestamp: 1 },
+					{
+						role: "assistant",
+						content: "a",
+						timestamp: 2,
+						toolCalls: [{ id: "c1", name: "shell", arguments: {} }],
+					},
+					{
+						role: "tool",
+						content: "ok",
+						timestamp: 3,
+						toolCallId: "c1",
+						name: "shell",
+					},
+				],
+				metadata: { pipelineCount: 0, agentCount: 0 },
+			};
+			SM.load = () => loadedSession;
+			try {
+				const cmd = registry.get("resume")!;
+				const replaced: any[] = [];
+				const ctx = makeCtx({
+					session: {
+						id: "current",
+						incPipelines: vi.fn(),
+						incAgents: vi.fn(),
+						messageCount: 0,
+						pipelineCount: 0,
+						agentCount: 0,
+						close: vi.fn(),
+						clearMessages: vi.fn(),
+						getRecentMessages: vi.fn().mockReturnValue([]),
+						replaceWith: (s: any) => replaced.push(s),
+					} as any,
+				});
+				const result = await cmd.handler(ctx, "loaded-1");
+				expect(result.type).toBe("success");
+				expect(result.output).toContain("Resumed session loaded-1");
+				expect(result.output).toContain("1 tool results");
+				expect(result.output).toContain("1 tool-calling turns");
+				expect(replaced).toHaveLength(1);
+				expect(replaced[0].id).toBe("loaded-1");
+			} finally {
+				SM.load = originalLoad;
+			}
+		});
+	});
 });
