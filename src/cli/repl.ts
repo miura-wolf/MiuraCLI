@@ -169,6 +169,44 @@ async function executeInput(
 				? `Recent session context:\n${recent.map((m) => `${m.role}: ${m.content.slice(0, 200)}`).join("\n")}\n\nCurrent task:\n${input}`
 				: input;
 
+		// Subscribe to live events BEFORE calling runAgent. The agent loop
+		// emits `agent.token` per streamed content chunk and `agent.toolCalled`
+		// after each tool executes. We render both in place. If no token
+		// arrives (e.g. /stream is off, or the adapter doesn't expose
+		// streamChat), we fall back to printing the final result once.
+		const eventBus = miura.getEventBus();
+		let streamedAny = false;
+		const STREAMED_SENTINEL = "__STREAMED__";
+
+		const onToken = (_payload: { agentId: string; token: string }) => {
+			streamedAny = true;
+			process.stdout.write(_payload.token);
+		};
+		const onToolCalled = (payload: {
+			agentId: string;
+			name: string;
+			output: string;
+			error?: string;
+			durationMs: number;
+		}) => {
+			// If we're inside a streaming response, print a blank line first
+			// so the tool-call card stands out from the streamed text.
+			if (streamedAny) process.stdout.write("\n");
+			const ok = !payload.error;
+			const sym = ok ? "⏺" : "✗";
+			const color = ok ? C.cyan : C.red;
+			const argsShort =
+				payload.output.length > 0
+					? ` → ${payload.output.length} chars`
+					: "";
+			process.stdout.write(
+				`${color}${sym} ${payload.name}${C.reset}${C.dim}${argsShort} (${payload.durationMs}ms)${C.reset}\n`,
+			);
+		};
+
+		eventBus.on("agent.token", onToken as any);
+		eventBus.on("agent.toolCalled", onToolCalled as any);
+
 		try {
 			const override = session.activeModel;
 			const result = await miura.runAgent(
@@ -180,12 +218,25 @@ async function executeInput(
 			);
 			session.addAssistant(result.output);
 			session.incAgents();
+
+			if (streamedAny) {
+				// Tokens were already printed live. End the streamed line
+				// cleanly and tell handleResult to NOT re-print.
+				process.stdout.write("\n");
+				return { output: STREAMED_SENTINEL, type: "text" };
+			}
+			// No streaming happened (adapter has no streamChat, or /stream
+			// is off). Use the normal success path.
 			return { output: result.output, type: "success" };
 		} catch (err: any) {
+			if (streamedAny) process.stdout.write("\n");
 			return {
 				output: `❌ ${err.message || "Agent execution failed"}`,
 				type: "error",
 			};
+		} finally {
+			eventBus.off("agent.token", onToken as any);
+			eventBus.off("agent.toolCalled", onToolCalled as any);
 		}
 	}
 
@@ -207,6 +258,10 @@ async function handleResult(
 	result: CommandResult,
 	session: SessionManager,
 ): Promise<void> {
+	// Streamed results already rendered live; the sentinel is just so we
+	// don't double-print.
+	if (result.output === "__STREAMED__") return;
+
 	switch (result.type) {
 		case "error":
 			printError(result.output);
@@ -223,6 +278,7 @@ async function handleResult(
 		case "text":
 		default:
 			printOutput(result.output);
+			break;
 	}
 
 	if (result.output === "__CLEAR__") {

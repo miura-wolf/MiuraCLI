@@ -13,8 +13,11 @@ import {
 	parseToolCalls,
 	toOpenAIMessages,
 	toOpenAITools,
+	streamOpenAIChat,
+	finaliseToolCall,
 	type WireToolCall,
 } from "../openai-compat.js";
+import type { ChatChunk } from "../../../core/types.js";
 
 const DEFAULT_BASE_URL = "http://localhost:1234/v1";
 
@@ -181,6 +184,44 @@ export class LMStudioAdapter implements LLMAdapter {
 			return (data.data ?? []).map((m) => m.id);
 		} catch {
 			return [];
+		}
+	}
+
+	/**
+	 * Typed streaming entry point. Yields one ChatChunk per provider
+	 * delta so the agent loop can render content live and detect tool
+	 * calls mid-stream. Tool-call arguments are finalised (raw JSON
+	 * parsed into objects) before emission.
+	 */
+	async *streamChat(
+		model: ModelRef,
+		messages: import("../../../core/types.js").LLMMessage[],
+		options: import("../../../core/types.js").LLMOptions,
+	): AsyncGenerator<ChatChunk> {
+		const body: Record<string, unknown> = {
+			model: model.model,
+			messages: toOpenAIMessages(messages),
+			max_tokens: options.maxTokens ?? 4096,
+			temperature: options.temperature ?? 0.7,
+		};
+		const wireTools = toOpenAITools(options.tools);
+		if (wireTools) {
+			body.tools = wireTools;
+			body.tool_choice = "auto";
+		}
+
+		for await (const chunk of streamOpenAIChat(
+			`${this.baseUrl}/chat/completions`,
+			{},
+			body,
+		)) {
+			if (chunk.toolCall) {
+				yield { toolCall: finaliseToolCall(chunk.toolCall) };
+			} else if (chunk.content !== undefined) {
+				yield { content: chunk.content };
+			} else if (chunk.done) {
+				yield { done: true, usage: chunk.usage };
+			}
 		}
 	}
 }

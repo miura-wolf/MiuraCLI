@@ -349,6 +349,22 @@ export interface LLMResult {
 }
 
 /**
+ * A single chunk of a streaming chat-completions response.
+ * Providers that implement `streamChat()` emit one or more of these
+ * per token/decision. The loop accumulates them into a final LLMResult.
+ */
+export interface ChatChunk {
+	/** Incremental text content. May arrive across many chunks. */
+	content?: string;
+	/** A single tool call being assembled across chunks. */
+	toolCall?: ToolCall;
+	/** Token usage if the provider reports it (usually on the last chunk). */
+	usage?: { prompt?: number; completion?: number };
+	/** Set on the final chunk so the loop knows when to stop iterating. */
+	done?: boolean;
+}
+
+/**
  * LLM Adapter interface.
  * Each provider (claude, nvidia-nim, ollama, llama-server, etc.) implements this.
  */
@@ -364,6 +380,17 @@ export interface LLMAdapter {
 		messages: LLMMessage[],
 		options: LLMOptions,
 	): Promise<LLMResult>;
+	/**
+	 * Optional streaming entry point. When implemented, the agent loop
+	 * will prefer this over `prompt()` so tokens render live and tool
+	 * calls can be detected mid-stream. The default agent loop falls
+	 * back to `prompt()` when this method is absent.
+	 */
+	streamChat?(
+		model: ModelRef,
+		messages: LLMMessage[],
+		options: LLMOptions,
+	): AsyncGenerator<ChatChunk>;
 }
 
 export interface ToolDefinition {

@@ -13,6 +13,7 @@ import { ModelRouter, DEFAULT_ROUTING } from "./core/model-router.js";
 import { StructuredLogger, MetricsCollector } from "./core/observability.js";
 import { getRuntimeConfig } from "./config.js";
 import { buildSystemPrompt } from "./core/context-builder.js";
+import { isStreamingEnabled } from "./core/streaming-service.js";
 
 // Agent plugins
 import { PlannerAgent } from "./plugins/agents/planner/index.js";
@@ -409,12 +410,15 @@ export class MiuraSwarm {
 					const currentModel = forcedModel ?? this.modelRouter.resolve(role);
 					const adapter = this.resolveAdapter(currentModel.provider);
 
-					// Send messages + available tools
+					// Send messages + available tools. Prefer typed streaming
+					// (streamChat) when the adapter exposes it AND user has
+					// /stream on — that path renders content live and detects
+					// tool calls mid-stream. Otherwise fall back to prompt().
 					const tools = registry.list();
-					const llmResult = await adapter.prompt(currentModel, chat, {
+					const llmResult = await this.callModel(adapter, currentModel, chat, {
 						maxTokens: cfg.maxTokens,
 						tools,
-					});
+					}, sessionId);
 
 					// Accumulate token usage
 					totalPromptTokens += llmResult.tokenUsage.prompt;
@@ -494,6 +498,85 @@ export class MiuraSwarm {
 
 		if (result.exitCode !== 0) this.modelRouter.reportFailure(role, model);
 		return result;
+	}
+
+	/**
+	 * Run a single LLM call, preferring typed streaming when available.
+	 *
+	 * Path A — adapter.streamChat exists AND /stream is on:
+	 *   Iterate the ChatChunk stream. For each content chunk emit
+	 *   `agent.token` (so the REPL can render live). For each toolCall
+	 *   chunk, accumulate. On the final chunk, assemble into LLMResult.
+	 *
+	 * Path B — anything else:
+	 *   Fall back to adapter.prompt(). No live tokens, but the rest of
+	 *   the loop is identical.
+	 *
+	 * Either way the return value is a normal LLMResult, so the loop
+	 * doesn't have to branch on the streaming path.
+	 */
+	private async callModel(
+		adapter: LLMAdapter,
+		model: ModelRef,
+		messages: LLMMessage[],
+		options: import("./core/types.js").LLMOptions,
+		sessionId: string,
+	): Promise<import("./core/types.js").LLMResult> {
+		const start = Date.now();
+		const useStream = !!adapter.streamChat && isStreamingEnabled();
+
+		if (!useStream) {
+			return adapter.prompt(model, messages, options);
+		}
+
+		// Path A: typed streaming.
+		let output = "";
+		const toolCalls: import("./core/types.js").ToolCall[] = [];
+		let promptTokens = 0;
+		let completionTokens = 0;
+
+		try {
+			for await (const chunk of adapter.streamChat!(model, messages, options)) {
+				if (chunk.content) {
+					output += chunk.content;
+					this.eventBus.emit("agent.token" as any, {
+						agentId: sessionId,
+						token: chunk.content,
+					});
+				}
+				if (chunk.toolCall) {
+					toolCalls.push(chunk.toolCall);
+				}
+				if (chunk.done) {
+					if (chunk.usage?.prompt !== undefined) {
+						promptTokens = chunk.usage.prompt;
+					}
+					if (chunk.usage?.completion !== undefined) {
+						completionTokens = chunk.usage.completion;
+					}
+				}
+			}
+		} catch (err) {
+			// If the stream fails mid-flight, fall back to prompt() so the
+			// agent doesn't get stuck. This is the right degradation: a
+			// user with /stream on still gets an answer, just not live.
+			this.logger.log({
+				timestamp: Date.now(),
+				level: "warn",
+				event: "stream-fallback",
+				error: String(err),
+				metadata: { provider: model.provider, model: model.model },
+			});
+			return adapter.prompt(model, messages, options);
+		}
+
+		return {
+			output,
+			tokenUsage: { prompt: promptTokens, completion: completionTokens },
+			model: model.model,
+			durationMs: Date.now() - start,
+			toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+		};
 	}
 
 	async runPipeline(

@@ -1,11 +1,16 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import {
 	toOpenAIMessages,
 	parseToolCalls,
 	toOpenAITools,
+	streamOpenAIChat,
+	finaliseToolCall,
 	type WireToolCall,
 } from "./openai-compat.js";
 import type { LLMMessage } from "../../core/types.js";
+
+const mockFetch = vi.fn();
+global.fetch = mockFetch as unknown as typeof fetch;
 
 describe("openai-compat: toOpenAIMessages", () => {
 	it("passes through plain system/user/assistant turns", () => {
@@ -135,5 +140,149 @@ describe("openai-compat: round-trip ReAct turn", () => {
 		const wire = toOpenAIMessages(nextTurn);
 		expect(wire[0].tool_calls![0].id).toBe("call_1");
 		expect(wire[1].tool_call_id).toBe("call_1");
+	});
+});
+
+describe("openai-compat: finaliseToolCall", () => {
+	it("parses _raw argument string into an object", () => {
+		const tc = {
+			id: "c1",
+			name: "read_file",
+			arguments: { _raw: '{"file_path":"a.ts"}' },
+		};
+		const out = finaliseToolCall(tc);
+		expect(out.arguments).toEqual({ file_path: "a.ts" });
+	});
+	it("keeps malformed JSON as _raw (small-model tolerance)", () => {
+		const tc = {
+			id: "c1",
+			name: "bad",
+			arguments: { _raw: "not-json" },
+		};
+		expect(finaliseToolCall(tc).arguments).toEqual({ _raw: "not-json" });
+	});
+	it("passes through already-parsed arguments", () => {
+		const tc = { id: "c1", name: "x", arguments: { a: 1 } };
+		expect(finaliseToolCall(tc)).toEqual(tc);
+	});
+});
+
+describe("openai-compat: streamOpenAIChat", () => {
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	function sseResponse(chunks: string[]): Response {
+		const encoder = new TextEncoder();
+		const stream = new ReadableStream({
+			start(controller) {
+				controller.enqueue(encoder.encode(chunks.join("")));
+				controller.close();
+			},
+		});
+		return {
+			ok: true,
+			status: 200,
+			body: stream,
+		} as unknown as Response;
+	}
+
+	it("yields content chunks and a final done for a text-only stream", async () => {
+		const sse = [
+			'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+			'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+			"data: [DONE]\n\n",
+		];
+		mockFetch.mockResolvedValueOnce(sseResponse(sse));
+
+		const out: string[] = [];
+		let doneChunk: { done?: boolean; usage?: unknown } | undefined;
+		for await (const c of streamOpenAIChat("https://x/v1/chat", {}, {})) {
+			if (c.content) out.push(c.content);
+			if (c.done) doneChunk = c;
+		}
+		expect(out.join("")).toBe("Hello");
+		expect(doneChunk?.done).toBe(true);
+	});
+
+	it("forces stream:true on the request body", async () => {
+		mockFetch.mockResolvedValueOnce(
+			sseResponse(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n', "data: [DONE]\n\n"]),
+		);
+		for await (const _c of streamOpenAIChat("https://x/v1/chat", {}, { stream: false })) {
+			// drain
+		}
+		const init = mockFetch.mock.calls[0] as [string, RequestInit];
+		const body = JSON.parse(init[1].body as string);
+		expect(body.stream).toBe(true);
+	});
+
+	it("reassembles tool-call fragments by index and emits finalised", async () => {
+		// Two tool calls, each split across multiple chunks.
+		const sse = [
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","function":{"name":"read_file","arguments":""}}]}}]}\n\n',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"file"}}]}}]}\n\n',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"_path\\":\\"x\\"}"}}]}}]}\n\n',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"id":"call_b","function":{"name":"glob","arguments":""}}]}}]}\n\n',
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\\"pattern\\":\\"**/*.ts\\"}"}}]}}]}\n\n',
+			"data: [DONE]\n\n",
+		];
+		mockFetch.mockResolvedValueOnce(sseResponse(sse));
+
+		const toolCalls: Array<{ id?: string; name?: string; arguments?: unknown }> = [];
+		for await (const c of streamOpenAIChat("https://x/v1/chat", {}, {})) {
+			if (c.toolCall) {
+				toolCalls.push({
+					id: c.toolCall.id,
+					name: c.toolCall.name,
+					arguments: c.toolCall.arguments,
+				});
+			}
+		}
+		expect(toolCalls).toHaveLength(2);
+		expect(toolCalls[0].id).toBe("call_a");
+		expect(toolCalls[0].name).toBe("read_file");
+		expect(toolCalls[1].id).toBe("call_b");
+		expect(toolCalls[1].name).toBe("glob");
+	});
+
+	it("captures usage from the final chunk", async () => {
+		const sse = [
+			'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n',
+			'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3}}\n\n',
+			"data: [DONE]\n\n",
+		];
+		mockFetch.mockResolvedValueOnce(sseResponse(sse));
+		let usage: { prompt?: number; completion?: number } | undefined;
+		for await (const c of streamOpenAIChat("https://x/v1/chat", {}, {})) {
+			if (c.done) usage = c.usage;
+		}
+		expect(usage).toEqual({ prompt: 7, completion: 3 });
+	});
+
+	it("throws on non-2xx with the upstream status", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: false,
+			status: 502,
+			text: async () => "bad gateway",
+		} as unknown as Response);
+		await expect(async () => {
+			for await (const _c of streamOpenAIChat("https://x/v1/chat", {}, {})) {
+				/* drain */
+			}
+		}).toThrow(/502/);
+	});
+
+	it("flushes accumulated tool calls on abrupt end (no [DONE])", async () => {
+		const sse = [
+			'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_z","function":{"name":"a","arguments":"{}"}}]}}]}\n\n',
+		];
+		mockFetch.mockResolvedValueOnce(sseResponse(sse));
+		const toolCalls: Array<{ id?: string; name?: string }> = [];
+		for await (const c of streamOpenAIChat("https://x/v1/chat", {}, {})) {
+			if (c.toolCall) toolCalls.push({ id: c.toolCall.id, name: c.toolCall.name });
+			if (c.done) {/* expect a done chunk via the finally flush */}
+		}
+		expect(toolCalls).toEqual([{ id: "call_z", name: "a" }]);
 	});
 });
