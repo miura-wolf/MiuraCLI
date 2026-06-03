@@ -482,4 +482,256 @@ describe("CommandRegistry", () => {
 			}
 		});
 	});
+
+	describe("/clear command", () => {
+		it("is registered with /reset alias", () => {
+			const cmd = registry.get("clear");
+			expect(cmd).toBeDefined();
+			expect(cmd!.aliases).toContain("reset");
+		});
+
+		it("returns the __CLEAR__ sentinel and calls clearMessages", async () => {
+			const cmd = registry.get("clear")!;
+			const ctx = makeCtx({
+				session: {
+					id: "sess_abc",
+					incPipelines: vi.fn(),
+					incAgents: vi.fn(),
+					messageCount: 7,
+					pipelineCount: 0,
+					agentCount: 0,
+					close: vi.fn(),
+					clearMessages: vi.fn(),
+					getRecentMessages: vi.fn().mockReturnValue([]),
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			// The REPL intercepts this sentinel to also wipe the screen.
+			expect(result.output).toBe("__CLEAR__");
+			expect(result.type).toBe("text");
+			expect((ctx.session as any).clearMessages).toHaveBeenCalledOnce();
+		});
+	});
+
+	describe("/compact command", () => {
+		it("is registered", () => {
+			const cmd = registry.get("compact");
+			expect(cmd).toBeDefined();
+			expect(cmd!.name).toBe("compact");
+		});
+
+		it("returns error when CompactionManager is not initialized", async () => {
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => undefined,
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			expect(result.type).toBe("error");
+			expect(result.output).toContain("not initialized");
+		});
+
+		it("returns info when the session has no messages", async () => {
+			const fakeInner = {
+				compact: vi.fn(),
+				getCurrentStrategy: () => "no_compaction",
+			};
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => ({ compactionManager: fakeInner }),
+				} as any,
+				session: {
+					id: "sess_empty",
+					messageCount: 0,
+					getHistoryAsLLMMessages: () => [],
+					clearMessages: vi.fn(),
+					addUser: vi.fn(),
+					addAssistant: vi.fn(),
+					addAssistantTurn: vi.fn(),
+					addToolResult: vi.fn(),
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			expect(result.type).toBe("info");
+			expect(result.output).toContain("Nothing to compact");
+		});
+
+		it("rejects a non-numeric context window", async () => {
+			const fakeInner = {
+				compact: vi.fn(),
+				getCurrentStrategy: () => "sliding_window",
+			};
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => ({ compactionManager: fakeInner }),
+				} as any,
+				session: { messageCount: 3, getHistoryAsLLMMessages: () => [] } as any,
+			});
+			const result = await cmd.handler(ctx, "abc");
+			expect(result.type).toBe("error");
+			expect(result.output).toContain("Invalid context window");
+		});
+
+		it("runs the active strategy, rebuilds the session, and reports stats", async () => {
+			const fakeInner = {
+				compact: vi.fn().mockReturnValue({
+					compactedMessages: [
+						{ role: "user", content: "u1" },
+						{ role: "assistant", content: "summary" },
+					],
+					removedMessages: [
+						{ role: "user", content: "u0" },
+						{ role: "assistant", content: "old" },
+						{ role: "user", content: "u1" },
+						{ role: "assistant", content: "old2" },
+						{ role: "tool", content: "x", toolCallId: "c", name: "shell" },
+					],
+					stats: {
+						originalCount: 7,
+						compactedCount: 2,
+						removedCount: 5,
+						compressionRatio: 0.71,
+						strategyUsed: "sliding_window",
+					},
+				}),
+				getCurrentStrategy: () => "sliding_window",
+			};
+			const adderLog: string[] = [];
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => ({ compactionManager: fakeInner }),
+				} as any,
+				session: {
+					id: "sess_c1",
+					messageCount: 7,
+					getHistoryAsLLMMessages: () => [
+						{ role: "user", content: "u0" },
+						{ role: "assistant", content: "old" },
+					],
+					clearMessages: () => adderLog.push("clear"),
+					addUser: (c: string) => adderLog.push(`user:${c}`),
+					addAssistant: (c: string) => adderLog.push(`asst:${c}`),
+					addAssistantTurn: (c: string) => adderLog.push(`turn:${c}`),
+					addToolResult: () => adderLog.push("tool"),
+					persist: () => adderLog.push("persist"),
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "4000");
+			expect(result.type).toBe("success");
+			expect(result.output).toContain("sliding_window");
+			expect(result.output).toContain("context window: 4000");
+			expect(result.output).toContain("before: 7 messages");
+			expect(result.output).toContain("after:  2 messages");
+			expect(result.output).toContain("removed: 5");
+			expect(result.output).toContain("71% compression");
+			// 2 messages re-added in order, then explicit persist
+			expect(adderLog).toEqual([
+				"clear",
+				"user:u1",
+				"asst:summary",
+				"persist",
+			]);
+			expect(fakeInner.compact).toHaveBeenCalledWith(
+				expect.any(Array),
+				4000,
+			);
+		});
+
+		it("uses 8000 as the default context window", async () => {
+			const fakeInner = {
+				compact: vi.fn().mockReturnValue({
+					compactedMessages: [{ role: "user", content: "u" }],
+					removedMessages: [],
+					stats: {
+						originalCount: 1,
+						compactedCount: 1,
+						removedCount: 0,
+						compressionRatio: 0,
+						strategyUsed: "no_compaction",
+					},
+				}),
+				getCurrentStrategy: () => "no_compaction",
+			};
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => ({ compactionManager: fakeInner }),
+				} as any,
+				session: {
+					id: "sess_d",
+					messageCount: 1,
+					getHistoryAsLLMMessages: () => [{ role: "user", content: "u" }],
+					clearMessages: vi.fn(),
+					addUser: vi.fn(),
+					persist: vi.fn(),
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			expect(fakeInner.compact).toHaveBeenCalledWith(expect.any(Array), 8000);
+			expect(result.output).toContain("context window: 8000");
+		});
+
+		it("rebuilds a full ReAct loop (user, assistant w/ tools, tool result)", async () => {
+			const fakeInner = {
+				compact: vi.fn().mockReturnValue({
+					compactedMessages: [
+						{ role: "user", content: "u" },
+						{
+							role: "assistant",
+							content: "ok",
+							toolCalls: [{ id: "c1", name: "read", arguments: { p: "/a" } }],
+						},
+						{
+							role: "tool",
+							content: "contents",
+							toolCallId: "c1",
+							name: "read",
+						},
+					],
+					removedMessages: [],
+					stats: {
+						originalCount: 3,
+						compactedCount: 3,
+						removedCount: 0,
+						compressionRatio: 0,
+						strategyUsed: "no_compaction",
+					},
+				}),
+				getCurrentStrategy: () => "no_compaction",
+			};
+			const adderLog: string[] = [];
+			const cmd = registry.get("compact")!;
+			const ctx = makeCtx({
+				miura: {
+					getCompactionManager: () => ({ compactionManager: fakeInner }),
+				} as any,
+				session: {
+					id: "sess_r",
+					messageCount: 3,
+					getHistoryAsLLMMessages: () => [
+						{ role: "user", content: "u" },
+					],
+					clearMessages: () => adderLog.push("clear"),
+					addUser: (c: string) => adderLog.push(`u:${c}`),
+					addAssistant: () => adderLog.push("asst"),
+					addAssistantTurn: (c: string) => adderLog.push(`turn:${c}`),
+					addToolResult: (id: string, name: string, out: string) =>
+						adderLog.push(`tool:${id}:${name}:${out}`),
+					persist: () => adderLog.push("persist"),
+				} as any,
+			});
+			await cmd.handler(ctx, "");
+			expect(adderLog).toEqual([
+				"clear",
+				"u:u",
+				"turn:ok",
+				"tool:c1:read:contents",
+				"persist",
+			]);
+		});
+	});
 });

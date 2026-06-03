@@ -296,6 +296,7 @@ export class SessionManager {
       arguments: Record<string, unknown>;
     }>;
     toolCallId?: string;
+    name?: string;
   }> {
     const out: Array<{
       role: "user" | "assistant" | "tool";
@@ -306,6 +307,7 @@ export class SessionManager {
         arguments: Record<string, unknown>;
       }>;
       toolCallId?: string;
+      name?: string;
     }> = [];
     for (const m of this.session.messages) {
       if (m.role === "user") {
@@ -325,6 +327,7 @@ export class SessionManager {
           role: "tool",
           content: m.content,
           toolCallId: m.toolCallId,
+          name: m.name,
         });
       }
       // system messages are intentionally skipped

@@ -1755,6 +1755,157 @@ Strategies can be configured with JSON options:
 				};
 			},
 		});
+
+		// ─── /clear ─────────────────────────────────────────────────────────────
+		// Returns the `__CLEAR__` sentinel which the REPL intercepts to
+		// also clear the terminal screen. We still go through
+		// `clearMessages()` here so the side effect is consistent if the
+		// command is invoked through a non-REPL path.
+		this.register({
+			name: "clear",
+			aliases: ["reset"],
+			description:
+				"Clear the in-memory conversation history (session file is kept on disk)",
+			usage: "",
+			handler: async (ctx) => {
+				ctx.session.clearMessages();
+				return { output: "__CLEAR__", type: "text" };
+			},
+		});
+
+		// ─── /compact [contextWindow] ───────────────────────────────────────────
+		// Run the active CompactionManager strategy against the current
+		// session's message history. The strategy is the one currently
+		// configured on the plugin (default `no_compaction`, which is a
+		// no-op). To change strategies, use /compaction set <name> (the
+		// admin subcommand registered by CompactionManagerPlugin).
+		this.register({
+			name: "compact",
+			description:
+				"Run the active compaction strategy on the current session's history",
+			usage: "[contextWindow]",
+			handler: async (ctx, args) => {
+				const cm = ctx.miura.getCompactionManager();
+				if (!cm) {
+					return {
+						output:
+							"CompactionManager plugin not initialized. " +
+							"Is it registered in your config?",
+						type: "error",
+					};
+				}
+				// Allow an optional context-window override. The default
+				// 8000 is conservative and works for most chat agents;
+				// users with long-context models can bump it.
+				const trimmed = args.trim();
+				let contextWindow = 8000;
+				if (trimmed) {
+					const n = Number(trimmed);
+					if (!Number.isFinite(n) || n <= 0) {
+						return {
+							output: `Invalid context window: "${trimmed}". Pass a positive number, e.g. /compact 16000.`,
+							type: "error",
+						};
+					}
+					contextWindow = Math.floor(n);
+				}
+				const before = ctx.session.messageCount;
+				if (before === 0) {
+					return {
+						output: "Nothing to compact — session has no messages yet.",
+						type: "info",
+					};
+				}
+				const messages = ctx.session.getHistoryAsLLMMessages();
+				// Run the strategy. The plugin exposes the manager
+				// indirectly through its `execute` method on the
+				// compaction tool, but we want a direct call. Fall back
+				// to the public `compact` API.
+				const pluginCm = cm as unknown as {
+					compactionManager?: {
+						compact: (
+							msgs: typeof messages,
+							ctx: number,
+						) => {
+							compactedMessages: typeof messages;
+							removedMessages: typeof messages;
+							stats: {
+								originalCount: number;
+								compactedCount: number;
+								removedCount: number;
+								compressionRatio: number;
+								strategyUsed: string;
+							};
+						};
+						getCurrentStrategy: () => string;
+					};
+				};
+				const inner = pluginCm.compactionManager;
+				if (!inner || typeof inner.compact !== "function") {
+					return {
+						output:
+							"CompactionManager plugin does not expose the manager directly. " +
+							"Use the compaction_strategies tool instead.",
+						type: "error",
+					};
+				}
+				let result: ReturnType<NonNullable<typeof inner.compact>>;
+				try {
+					result = inner.compact(messages, contextWindow);
+				} catch (err: any) {
+					return {
+						output: `Compaction failed: ${err?.message ?? "unknown error"}`,
+						type: "error",
+					};
+				}
+				const after = result.compactedMessages.length;
+				const removed = before - after;
+				const ratio = (result.stats.compressionRatio * 100).toFixed(0);
+				// Rebuild the session messages from the compacted
+				// LLMMessage list. We use SessionManager's own adders
+				// (in order) so the persisted shape matches what was
+				// already on disk.
+				ctx.session.clearMessages();
+				for (const m of result.compactedMessages) {
+					if (m.role === "user") {
+						ctx.session.addUser(m.content);
+					} else if (m.role === "assistant") {
+						if (m.toolCalls && m.toolCalls.length > 0) {
+							ctx.session.addAssistantTurn(
+								m.content ?? "",
+								m.toolCalls.map((tc) => ({
+									id: tc.id,
+									name: tc.name,
+									arguments: tc.arguments,
+								})),
+							);
+						} else {
+							ctx.session.addAssistant(m.content ?? "");
+						}
+					} else if (m.role === "tool") {
+						if (m.toolCallId && m.name) {
+							ctx.session.addToolResult(
+								m.toolCallId,
+								m.name,
+								m.content ?? "",
+							);
+						}
+					}
+				}
+				// Force a persist of the new state.
+				(ctx.session as { persist: () => void }).persist();
+				const strategy = inner.getCurrentStrategy();
+				return {
+					output:
+						`Compacted using \`${strategy}\` (context window: ${contextWindow} tokens)\n` +
+						`  before: ${before} messages\n` +
+						`  after:  ${after} messages\n` +
+						`  removed: ${removed} (${ratio}% compression)\n\n` +
+						`Session is persisted to disk. Use /resume ${ctx.session.id} to roll back if needed.`,
+					type: "success",
+				};
+			},
+		});
 	}
 
 	register(cmd: CommandDef): void {
