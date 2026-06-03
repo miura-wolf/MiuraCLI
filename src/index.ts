@@ -751,6 +751,12 @@ export class MiuraSwarm {
 			| undefined;
 	}
 
+	getEngramReader(): EngramReaderPlugin | undefined {
+		return this.pluginHost.getPlugin("integration-engram-reader") as
+			| EngramReaderPlugin
+			| undefined;
+	}
+
 	getOpenSpecManager(): OpenSpecManagerPlugin | undefined {
 		return this.pluginHost.getPlugin("openspec-manager") as
 			| OpenSpecManagerPlugin

@@ -91,6 +91,13 @@ export async function runRepl(
 				NonNullable<ReturnType<typeof miura.getCompactionManager>>["registerCommands"]
 			>[0],
 		);
+	miura
+		.getEngramReader()
+		?.registerCommands?.(
+			registry as unknown as Parameters<
+				NonNullable<ReturnType<typeof miura.getEngramReader>>["registerCommands"]
+			>[0],
+		);
 
 	// Readline setup
 	const rl = await createReadline({
