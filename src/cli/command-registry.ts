@@ -1906,6 +1906,65 @@ Strategies can be configured with JSON options:
 				};
 			},
 		});
+
+		// ─── /cost [reset] ───────────────────────────────────────────────────────
+		// Show token usage for the current session — totals plus a
+		// per-provider/model breakdown. Tokens are accumulated by the
+		// REPL after every runAgent. We don't convert to $$ here
+		// because pricing per provider/model would need a hard-coded
+		// table or user config; tokens is the honest, source-of-truth
+		// metric.
+		this.register({
+			name: "cost",
+			description:
+				"Show token usage for this session (total + per-model breakdown)",
+			usage: "[reset]",
+			handler: async (ctx, args) => {
+				if (args.trim() === "reset") {
+					ctx.session.resetTokenUsage();
+					return {
+						output: "Token counters reset.",
+						type: "success",
+					};
+				}
+				const usage = ctx.session.tokenUsage;
+				const total = usage.prompt + usage.completion;
+				if (total === 0) {
+					return {
+						output:
+							"No token usage recorded yet for this session. " +
+							"Tokens are accumulated after each free-text chat turn. " +
+							"Use /cost reset to start a fresh measurement window.",
+						type: "info",
+					};
+				}
+				const ratio =
+					total > 0
+						? ((usage.completion / total) * 100).toFixed(0)
+						: "0";
+				const breakdown = ctx.session
+					.getTokenBreakdown()
+					.map((b) => {
+						const sub = b.prompt + b.completion;
+						return (
+							`  ${b.key.padEnd(36)} ${String(b.calls).padStart(3)} call${b.calls === 1 ? "" : "s"}` +
+							`  prompt ${String(b.prompt).padStart(6)}` +
+							`  completion ${String(b.completion).padStart(6)}` +
+							`  total ${String(sub).padStart(7)}`
+						);
+					})
+					.join("\n");
+				return {
+					output:
+						`Session ${ctx.session.id} — token usage\n` +
+						`  prompt:     ${usage.prompt}\n` +
+						`  completion: ${usage.completion}\n` +
+						`  total:      ${total} (${ratio}% completion)\n\n` +
+						`By provider/model:\n${breakdown}`,
+					type: "text",
+				};
+			},
+		});
 	}
 
 	register(cmd: CommandDef): void {

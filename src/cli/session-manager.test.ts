@@ -326,4 +326,89 @@ describe('SessionManager', () => {
       expect(h[2].toolCallId).toBe('t1');
     });
   });
+
+  describe('token tracking', () => {
+    it('starts at zero', () => {
+      const s = new SessionManager('tt-1');
+      expect(s.tokenUsage).toEqual({ prompt: 0, completion: 0 });
+      expect(s.getTokenBreakdown()).toEqual([]);
+    });
+
+    it('accumulates total and per-model usage', () => {
+      const s = new SessionManager('tt-2');
+      s.incTokens('claude', 'opus-4', 100, 50);
+      s.incTokens('claude', 'opus-4', 200, 100);
+      s.incTokens('groq', 'llama-3.3-70b', 50, 25);
+      expect(s.tokenUsage).toEqual({ prompt: 350, completion: 175 });
+      const bd = s.getTokenBreakdown();
+      // Sorted by total descending
+      expect(bd).toHaveLength(2);
+      expect(bd[0].key).toBe('claude/opus-4');
+      expect(bd[0].calls).toBe(2);
+      expect(bd[0].prompt).toBe(300);
+      expect(bd[0].completion).toBe(150);
+      expect(bd[1].key).toBe('groq/llama-3.3-70b');
+      expect(bd[1].calls).toBe(1);
+    });
+
+    it('is a no-op when both prompt and completion are 0', () => {
+      const s = new SessionManager('tt-3');
+      s.incTokens('claude', 'opus-4', 0, 0);
+      expect(s.tokenUsage).toEqual({ prompt: 0, completion: 0 });
+      expect(s.getTokenBreakdown()).toEqual([]);
+    });
+
+    it('resetTokenUsage clears both totals and breakdown, and persists', () => {
+      const s = new SessionManager('tt-4');
+      s.incTokens('claude', 'opus-4', 100, 50);
+      s.resetTokenUsage();
+      expect(s.tokenUsage).toEqual({ prompt: 0, completion: 0 });
+      expect(s.getTokenBreakdown()).toEqual([]);
+      // Persist is called — load from disk and verify
+      const loaded = SessionManager.load('tt-4');
+      expect(loaded?.tokenUsage).toEqual({
+        prompt: 0,
+        completion: 0,
+        byProvider: {},
+      });
+    });
+
+    it('persists token usage across sessions (load → counts intact)', () => {
+      const s = new SessionManager('tt-5');
+      s.incTokens('claude', 'opus-4', 500, 250);
+      s.incTokens('claude', 'opus-4', 500, 250);
+      // Force a persist
+      s.incAgents();
+      // We need ≥5 messages to auto-persist, OR call resetTokenUsage;
+      // simplest: add 5 user messages to trigger the 5-message auto-flush
+      for (let i = 0; i < 5; i++) s.addUser(`flush ${i}`);
+      const loaded = SessionManager.load('tt-5');
+      expect(loaded?.tokenUsage.prompt).toBe(1000);
+      expect(loaded?.tokenUsage.completion).toBe(500);
+      expect(loaded?.tokenUsage.byProvider['claude/opus-4']).toEqual({
+        prompt: 1000,
+        completion: 500,
+        calls: 2,
+      });
+    });
+  });
+
+  describe('replaceWith backfills legacy tokenUsage field', () => {
+    it('backfills tokenUsage when the loaded session predates the field', () => {
+      const s = new SessionManager('legacy-1');
+      s.replaceWith({
+        id: 'legacy-1',
+        createdAt: Date.now() - 1000,
+        updatedAt: Date.now(),
+        messages: [{ role: 'user', content: 'old', timestamp: 1 }],
+        metadata: { pipelineCount: 0, agentCount: 0 },
+        // NOTE: no `tokenUsage` field — simulating a session persisted
+        // before the token tracking feature existed.
+      } as any);
+      expect(s.tokenUsage).toEqual({ prompt: 0, completion: 0 });
+      // And we can still incTokens without crashing
+      s.incTokens('claude', 'opus-4', 10, 5);
+      expect(s.tokenUsage.prompt).toBe(10);
+    });
+  });
 });

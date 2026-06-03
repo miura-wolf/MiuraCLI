@@ -734,4 +734,82 @@ describe("CommandRegistry", () => {
 			]);
 		});
 	});
+
+	describe("/cost command", () => {
+		it("is registered", () => {
+			const cmd = registry.get("cost");
+			expect(cmd).toBeDefined();
+			expect(cmd!.name).toBe("cost");
+		});
+
+		it("returns info when no token usage has been recorded", async () => {
+			const cmd = registry.get("cost")!;
+			const ctx = makeCtx({
+				session: {
+					id: "sess_cost_1",
+					tokenUsage: { prompt: 0, completion: 0 },
+					resetTokenUsage: vi.fn(),
+					getTokenBreakdown: () => [],
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			expect(result.type).toBe("info");
+			expect(result.output).toContain("No token usage recorded yet");
+		});
+
+		it("shows totals and per-model breakdown", async () => {
+			const cmd = registry.get("cost")!;
+			const ctx = makeCtx({
+				session: {
+					id: "sess_cost_2",
+					tokenUsage: { prompt: 1500, completion: 500 },
+					resetTokenUsage: vi.fn(),
+					getTokenBreakdown: () => [
+						{
+							key: "claude/opus-4",
+							provider: "claude",
+							model: "opus-4",
+							prompt: 1000,
+							completion: 400,
+							calls: 3,
+						},
+						{
+							key: "groq/llama-3.3-70b",
+							provider: "groq",
+							model: "llama-3.3-70b",
+							prompt: 500,
+							completion: 100,
+							calls: 1,
+						},
+					],
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "");
+			expect(result.type).toBe("text");
+			expect(result.output).toContain("Session sess_cost_2");
+			expect(result.output).toContain("prompt:     1500");
+			expect(result.output).toContain("completion: 500");
+			expect(result.output).toContain("total:      2000");
+			expect(result.output).toContain("25% completion");
+			expect(result.output).toContain("claude/opus-4");
+			expect(result.output).toContain("groq/llama-3.3-70b");
+		});
+
+		it("reset subcommand clears the counters", async () => {
+			const cmd = registry.get("cost")!;
+			const reset = vi.fn();
+			const ctx = makeCtx({
+				session: {
+					id: "sess_cost_3",
+					tokenUsage: { prompt: 100, completion: 50 },
+					resetTokenUsage: reset,
+					getTokenBreakdown: () => [],
+				} as any,
+			});
+			const result = await cmd.handler(ctx, "reset");
+			expect(result.type).toBe("success");
+			expect(result.output).toContain("reset");
+			expect(reset).toHaveBeenCalledOnce();
+		});
+	});
 });

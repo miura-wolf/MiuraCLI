@@ -248,6 +248,18 @@ async function executeInput(
 				{ history },
 			);
 			session.incAgents();
+			// Record token usage for /cost. `runAgent` aggregates
+			// prompt+completion across all internal iterations
+			// (the ReAct loop may issue several LLM calls) and
+			// exposes the totals on `result.tokenUsage`.
+			if (result.tokenUsage && result.model) {
+				session.incTokens(
+					result.model.provider,
+					result.model.model,
+					result.tokenUsage.prompt,
+					result.tokenUsage.completion,
+				);
+			}
 			// Persist the full ReAct loop so /resume can replay it.
 			// - If the agent made tool calls, the assistant turn carries them
 			//   and each result is a separate `tool` turn linked by id.

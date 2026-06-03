@@ -57,12 +57,24 @@ export interface Session {
   updatedAt: number;
   messages: SessionMessage[];
   metadata: SessionMetadata;
+  /** Per-session token usage, broken down by provider/model. */
+  tokenUsage: SessionTokenUsage;
 }
 
 interface SessionMetadata {
   modelRef?: string;
   pipelineCount: number;
   agentCount: number;
+}
+
+export interface SessionTokenUsage {
+  prompt: number;
+  completion: number;
+  /** key: "<provider>/<model>", value: { prompt, completion } */
+  byProvider: Record<
+    string,
+    { prompt: number; completion: number; calls: number }
+  >;
 }
 
 export class SessionManager {
@@ -79,6 +91,7 @@ export class SessionManager {
       updatedAt: Date.now(),
       messages: [],
       metadata: { pipelineCount: 0, agentCount: 0 },
+      tokenUsage: { prompt: 0, completion: 0, byProvider: {} },
     };
     this.persistPath = resolveSessionPath(this.session.id);
   }
@@ -101,6 +114,44 @@ export class SessionManager {
 
   get agentCount(): number {
     return this.session.metadata.agentCount;
+  }
+
+  /**
+   * Read-only view of the session's token usage. The full breakdown
+   * by provider/model is available via `getTokenBreakdown()`.
+   */
+  get tokenUsage(): { prompt: number; completion: number } {
+    return {
+      prompt: this.session.tokenUsage.prompt,
+      completion: this.session.tokenUsage.completion,
+    };
+  }
+
+  /**
+   * Get a snapshot of token usage broken down by `<provider>/<model>`.
+   * Useful for the `/cost` command.
+   */
+  getTokenBreakdown(): Array<{
+    key: string;
+    provider: string;
+    model: string;
+    prompt: number;
+    completion: number;
+    calls: number;
+  }> {
+    return Object.entries(this.session.tokenUsage.byProvider)
+      .map(([key, v]) => {
+        const slash = key.indexOf("/");
+        return {
+          key,
+          provider: slash >= 0 ? key.slice(0, slash) : key,
+          model: slash >= 0 ? key.slice(slash + 1) : "?",
+          prompt: v.prompt,
+          completion: v.completion,
+          calls: v.calls,
+        };
+      })
+      .sort((a, b) => b.prompt + b.completion - (a.prompt + a.completion));
   }
 
   /** The active provider/model override, or null to use default routing. */
@@ -217,6 +268,42 @@ export class SessionManager {
    */
   incAgents(): void {
     this.session.metadata.agentCount++;
+  }
+
+  /**
+   * Record token usage from one LLM call. The provider/model key
+   * (e.g. `claude/opus-4`) is used for the per-model breakdown that
+   * the `/cost` command shows. No-op if both numbers are 0.
+   */
+  incTokens(
+    provider: string,
+    model: string,
+    prompt: number,
+    completion: number,
+  ): void {
+    if (prompt === 0 && completion === 0) return;
+    this.session.tokenUsage.prompt += prompt;
+    this.session.tokenUsage.completion += completion;
+    const key = `${provider}/${model}`;
+    const slot = this.session.tokenUsage.byProvider[key] ?? {
+      prompt: 0,
+      completion: 0,
+      calls: 0,
+    };
+    slot.prompt += prompt;
+    slot.completion += completion;
+    slot.calls += 1;
+    this.session.tokenUsage.byProvider[key] = slot;
+    this.session.updatedAt = Date.now();
+  }
+
+  /**
+   * Reset all token counters (used by `/cost reset`). Counters
+   * persist immediately so the reset is durable.
+   */
+  resetTokenUsage(): void {
+    this.session.tokenUsage = { prompt: 0, completion: 0, byProvider: {} };
+    this.persist();
   }
 
   /**
@@ -341,6 +428,12 @@ export class SessionManager {
    * continues the previous conversation.
    */
   replaceWith(other: Session): void {
+    // Older sessions (pre-token-tracking) were persisted without a
+    // `tokenUsage` field. Backfill it here so the rest of the code
+    // can rely on the field being present after a /resume.
+    if (!other.tokenUsage) {
+      other.tokenUsage = { prompt: 0, completion: 0, byProvider: {} };
+    }
     this.session = other;
     this.persistPath = resolveSessionPath(other.id);
   }
