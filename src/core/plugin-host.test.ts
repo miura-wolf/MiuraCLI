@@ -68,4 +68,24 @@ describe('PluginHost', () => {
     await host.register(createMockPlugin('dup'));
     await expect(host.register(createMockPlugin('dup'))).rejects.toThrow();
   });
+
+  describe('CommandRegistry injection', () => {
+    it('getCommandRegistry returns undefined before setCommandRegistry', () => {
+      expect(host.getCommandRegistry()).toBeUndefined();
+    });
+
+    it('setCommandRegistry stores the registry and getCommandRegistry returns it', () => {
+      const fakeRegistry = { register: () => {} };
+      host.setCommandRegistry(fakeRegistry as any);
+      expect(host.getCommandRegistry()).toBe(fakeRegistry);
+    });
+
+    it('setCommandRegistry can be replaced', () => {
+      const r1 = { register: () => {} };
+      const r2 = { register: () => {} };
+      host.setCommandRegistry(r1 as any);
+      host.setCommandRegistry(r2 as any);
+      expect(host.getCommandRegistry()).toBe(r2);
+    });
+  });
 });

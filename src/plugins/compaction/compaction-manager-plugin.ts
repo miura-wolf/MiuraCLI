@@ -25,17 +25,12 @@ export class CompactionManagerPlugin implements Plugin {
   }
 
   async initialize(host: PluginHostAPI): Promise<void> {
-    // Register CLI commands
-    const commandRegistry = host.getCommandRegistry?.() as any;
-    if (commandRegistry?.register) {
-      commandRegistry.register({
-        name: 'compaction',
-        aliases: ['compact'],
-        description: 'Manage compaction strategies for long conversations',
-        usage: '/compaction [list|set|config|stats|help]',
-        execute: this.handleCompactionCommand.bind(this),
-      });
-    }
+    // CLI command registration is deferred to `registerCommands()`,
+    // which the REPL calls AFTER `miura.initialize()` returns and
+    // AFTER it has created the CommandRegistry. At `initialize()` time
+    // the registry doesn't exist yet (PluginHost's getCommandRegistry
+    // returns undefined during init), so any registration here would
+    // be silently dropped. See `registerCommands` below.
 
     // Register tools
     const toolRegistry = host.getToolRegistry();
@@ -98,16 +93,56 @@ export class CompactionManagerPlugin implements Plugin {
     console.log('[CompactionManager] Plugin deactivated');
   }
 
+  /**
+   * Late-bind the `/compaction` admin command (alias `/compact`) into
+   * the CLI's CommandRegistry. Called by the REPL after
+   * `miura.initialize()` and after the CommandRegistry has been
+   * created. Idempotent — safe to call twice.
+   *
+   * Uses the CommandRegistry's `handler` shape (not `execute`),
+   * returning a `{ output, type: "text" }` so the REPL prints it
+   * with normal formatting. Subcommand args are passed through
+   * `rawArgs` and the legacy handleCompactionCommand splits them.
+   */
+  registerCommands(registry: {
+    register: (cmd: {
+      name: string;
+      aliases?: string[];
+      description: string;
+      usage: string;
+      handler: (ctx: unknown, args: string) => Promise<unknown>;
+    }) => void;
+  }): void {
+    registry.register({
+      name: 'compaction',
+      aliases: ['compact'],
+      description: 'Manage compaction strategies for long conversations',
+      usage: '/compaction [list|set|config|stats|help]',
+      handler: async (_ctx, args) => {
+        const output = await this.handleCompactionCommand({ args: args.trim() });
+        return { output, type: 'text' };
+      },
+    });
+  }
+
   private handleCompactionCommand(ctx: any): Promise<string> {
-    const [action, ...args] = ctx.args;
+    // Accept both `ctx.args` as an array (legacy shape) and as a
+    // single string (the CommandRegistry's `rawArgs` shape, which is
+    // what `registerCommands` now feeds us). This keeps the function
+    // compatible with the original plugin host contract while
+    // letting the REPL's handler signature stay clean.
+    const raw: string | string[] = Array.isArray(ctx.args)
+      ? ctx.args
+      : String(ctx.args ?? '').trim().split(/\s+/).filter(Boolean);
+    const [action, ...rest] = raw;
     
     switch (action) {
       case 'list':
         return Promise.resolve(this.listStrategies());
       case 'set':
-        return this.setStrategyCLI(args[0], args[1]);
+        return this.setStrategyCLI(rest[0], rest[1]);
       case 'config':
-        return Promise.resolve(this.showConfig(args[0]));
+        return Promise.resolve(this.showConfig(rest[0]));
       case 'stats':
         return Promise.resolve(this.showDetailedStats());
       case 'help':

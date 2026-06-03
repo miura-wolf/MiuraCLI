@@ -71,6 +71,27 @@ export async function runRepl(
 	// Command registry
 	const registry = new CommandRegistry();
 
+	// Wire the registry into the plugin host so plugins that expose
+	// slash commands (e.g. CompactionManagerPlugin's `/compaction` +
+	// `/compact` admin subcommands) can late-register them. Plugins
+	// that defer command registration implement
+	// `registerCommands(registry)`; we invoke those here, after the
+	// CommandRegistry exists but before the REPL loop starts.
+	miura.getPluginHost().setCommandRegistry(registry);
+	// The plugin's `registerCommands` is typed loosely (it expects a
+	// registry whose `handler` returns `Promise<unknown>`, to avoid
+	// pulling the CLI's `CommandResult` union into a non-CLI module).
+	// At runtime the actual CommandRegistry's `register` accepts our
+	// handler fine because we return a `{output, type: "text"}` shape.
+	// The cast widens the type at the call site.
+	miura
+		.getCompactionManager()
+		?.registerCommands?.(
+			registry as unknown as Parameters<
+				NonNullable<ReturnType<typeof miura.getCompactionManager>>["registerCommands"]
+			>[0],
+		);
+
 	// Readline setup
 	const rl = await createReadline({
 		history: loadHistory(),

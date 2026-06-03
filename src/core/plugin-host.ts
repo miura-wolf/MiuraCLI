@@ -23,6 +23,7 @@ export class PluginHost implements PluginHostAPI {
   private eventBus: EventBus;
   private stateStore: IStateStore | null = null;
   private toolRegistry: ToolRegistry;
+  private commandRegistry: CLICommandRegistry | null = null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -31,6 +32,18 @@ export class PluginHost implements PluginHostAPI {
 
   setStateStore(store: IStateStore): void {
     this.stateStore = store;
+  }
+
+  /**
+   * Inject the CLI's CommandRegistry so plugins can register slash
+   * commands. The REPL creates the CommandRegistry AFTER
+   * `miura.initialize()` (the latter kicks off all plugin inits), so
+   * this injection happens post-init. Plugins that want to expose
+   * commands implement a `registerCommands(registry)` hook that the
+   * REPL invokes explicitly after this call.
+   */
+  setCommandRegistry(registry: CLICommandRegistry): void {
+    this.commandRegistry = registry;
   }
 
   async register(plugin: Plugin): Promise<void> {
@@ -163,7 +176,7 @@ export class PluginHost implements PluginHostAPI {
   }
 
   getCommandRegistry(): CLICommandRegistry | undefined {
-    return undefined; // CLI command registry is set externally via setCommandRegistry
+    return this.commandRegistry ?? undefined;
   }
 
   private validateManifest(manifest: PluginManifest): void {
